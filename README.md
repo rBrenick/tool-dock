@@ -1,8 +1,17 @@
 # dcc-toolbox
-Template for a basic Qt tool in Maya
+Customizable UI for quick DCC tool palettes
 
 ![tool header image](docs/header_image.png)
 
+# How it works
+Via the *Configure* button you can specify tools that should be visible in the UI.
+
+Any subclass of ToolBoxItemBase can be added as QDockWidgets to the main UI.
+In *dcc_toolbox_examples.py* you'll find some samples of how to define tool classes.
+
+Classes with a *run* function defined will be executed on button press
+
+Classes with a *get_tool_actions* function defined will be added as individual buttons
 
 # Install
 
