@@ -9,9 +9,9 @@ Via the *Configure* button you can specify tools that should be visible in the U
 Any subclass of ToolBoxItemBase can be added as QDockWidgets to the main UI.
 In *dcc_toolbox_examples.py* you'll find some samples of how to define tool classes.
 
-Classes with a *run* function defined will be executed on button press
+Classes with a *run* function defined will be executed on button press.
 
-Classes with a *get_tool_actions* function defined will be added as individual buttons
+Classes with a *get_tool_actions* function defined will be added as individual buttons.
 
 # Install
 
