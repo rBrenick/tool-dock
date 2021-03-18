@@ -10,6 +10,12 @@ class AutoSkin(dtu.ToolBoxItemBase):
     def run(self, argument_1=True, arg_2=3.0):
         print(argument_1, arg_2)
 
+class AutoSkin2(dtu.ToolBoxItemBase):
+    TOOL_NAME = "AutoSkin2"
+
+    def run(self):
+        print(self.TOOL_NAME)
+
 
 class UpdateSkeleton(dtu.ToolBoxItemBase):
     TOOL_NAME = "Update Skeleton"

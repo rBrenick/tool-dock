@@ -16,7 +16,7 @@ def reload_module(full_refresh=False):
     from . import dcc_toolbox_examples
     from . import dcc_toolbox_ui
 
-    if full_refresh:  # under conditional arguemnt because WindowHandler class is defined here
+    if full_refresh:  # under conditional argument because WindowHandler class is defined here
         reload(ui_utils)
 
     reload(dcc_toolbox_utils)

@@ -19,11 +19,12 @@ except Exception as e:
 
 
 class ToolBoxWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
-    docking_object_name = "ToolBoxWindow"
+    docking_object_name = "ToolBox"
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, instance_number=0, *args, **kwargs):
         super(ToolBoxWindow, self).__init__(*args, **kwargs)
-        self.setWindowTitle("ToolBoxWindow")
+        self.instance_number = instance_number
+        self.setWindowTitle("ToolBoxWindow_{}".format(self.instance_number))
 
         self.dock_widgets = []
         self.settings = dtu.ToolBoxSettings()
@@ -43,21 +44,28 @@ class ToolBoxWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
         # create docks for each subclassed tool widget
         menu_bar = self.menuBar()  # type: QtWidgets.QMenuBar
         menu_bar.addAction("Configure", self.configure_toolbox)
+        layout_menu = menu_bar.addMenu("Layout")
+        layout_menu.addAction("Save Layout", self.save_ui_settings)
+        layout_menu.addAction("Load Layout", self.load_ui_settings)
 
-        self.user_toolbox_names = self.settings.value("user/toolbox", defaultValue=list())
+        self.active_toolbox = "toolbox_{}".format(self.instance_number)
+        self.k_active_tools = "{}/tools".format(self.active_toolbox)
+        self.k_win_geometry = "{}/window_geometry".format(self.active_toolbox)
+        self.k_win_state = "{}/window_state".format(self.active_toolbox)
+
         self.build_toolbox_display()
 
         self.load_ui_settings()
 
     def configure_toolbox(self):
-        win = ToolBoxConfigurationDialog(self, user_toolbox_names=self.user_toolbox_names)
+        active_tools = self.settings.value(self.k_active_tools, defaultValue=list())
+        win = ToolBoxConfigurationDialog(self, active_tools=active_tools)
         win.config_saved.connect(self.save_user_toolbox)
         return win.show()
 
     def save_user_toolbox(self, tool_names):
         self.save_ui_settings()
-        self.user_toolbox_names = tool_names
-        self.settings.setValue("user/toolbox", tool_names)
+        self.settings.setValue(self.k_active_tools, tool_names)
         self.build_toolbox_display()
         self.load_ui_settings()
 
@@ -71,12 +79,17 @@ class ToolBoxWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
         # wait for deleteLater to finish
         ui_utils.process_q_events()
 
+        active_tools = self.settings.value(self.k_active_tools, defaultValue=list())
+
         for toolbox_item_cls in dtu.all_subclasses(dtu.ToolBoxItemBase):
-            if toolbox_item_cls.TOOL_NAME not in self.user_toolbox_names:  # only build for selected window actions
+            if toolbox_item_cls.TOOL_NAME not in active_tools:  # only build for selected window actions
                 continue
 
             dock = QtWidgets.QDockWidget(toolbox_item_cls.TOOL_NAME, self)
-            dock.setObjectName(toolbox_item_cls.__name__.replace(" ", "_") + "_QtObject")
+
+            clean_tool_name = toolbox_item_cls.__name__.replace(" ", "_")
+            dock_object_name = "{}_{}_QtObject".format(clean_tool_name, self.instance_number)
+            dock.setObjectName(dock_object_name)
 
             tool_widget = toolbox_item_cls()  # type:dtu.ToolBoxItemBase
             dock.setWidget(tool_widget)
@@ -85,16 +98,16 @@ class ToolBoxWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
             self.dock_widgets.append(dock)
 
     def load_ui_settings(self):
-        window_geometry = self.settings.value(dtu.ToolBoxSettings.k_window_geometry)
-        window_state = self.settings.value(dtu.ToolBoxSettings.k_window_state)
+        window_geometry = self.settings.value(self.k_win_geometry)
+        window_state = self.settings.value(self.k_win_state)
         if window_geometry and window_state:
-            print("loading ui settings")
+            print("loading ui settings: {}".format(self.k_active_tools))
             self.restoreGeometry(window_geometry)
             self.restoreState(window_state)
 
     def save_ui_settings(self):
-        self.settings.setValue(dtu.ToolBoxSettings.k_window_geometry, self.saveGeometry())
-        self.settings.setValue(dtu.ToolBoxSettings.k_window_state, self.saveState())
+        self.settings.setValue(self.k_win_geometry, self.saveGeometry())
+        self.settings.setValue(self.k_win_state, self.saveState())
 
     def closeEvent(self, event):
         self.save_ui_settings()
@@ -107,7 +120,7 @@ class ToolBoxConfigurationDialog(QtWidgets.QDialog):
     """
     config_saved = QtCore.Signal(list)
 
-    def __init__(self, parent=ui_utils.get_app_window(), user_toolbox_names=None, *args, **kwargs):
+    def __init__(self, parent=ui_utils.get_app_window(), active_tools=None, *args, **kwargs):
         super(ToolBoxConfigurationDialog, self).__init__(parent=parent, *args, **kwargs)
         self.setWindowTitle("Toolbox Configuration")
 
@@ -116,7 +129,7 @@ class ToolBoxConfigurationDialog(QtWidgets.QDialog):
 
         self.tools_LW = QtWidgets.QListWidget()
         self.tools_LW.itemDoubleClicked.connect(ui_utils.toggle_list_widget_item_checked)
-        self.fill_tool_list(user_toolbox_names)
+        self.fill_tool_list(active_tools)
         main_layout.addWidget(self.tools_LW)
 
         # Save Button
@@ -124,7 +137,7 @@ class ToolBoxConfigurationDialog(QtWidgets.QDialog):
         save_button.clicked.connect(self.save_actions)
         main_layout.addWidget(save_button)
 
-    def fill_tool_list(self, user_toolbox_names):
+    def fill_tool_list(self, active_tools):
         """Populate ListWidget with items"""
         all_tool_names = sorted([cls.TOOL_NAME for cls in dtu.all_subclasses(dtu.ToolBoxItemBase)])
 
@@ -134,7 +147,7 @@ class ToolBoxConfigurationDialog(QtWidgets.QDialog):
             lwi.setFlags(lwi.flags() | QtCore.Qt.ItemIsUserCheckable)
             lwi.setCheckState(QtCore.Qt.Unchecked)
 
-            if user_toolbox_names and tool_name in user_toolbox_names:
+            if active_tools and tool_name in active_tools:
                 lwi.setCheckState(QtCore.Qt.Checked)
 
     def save_actions(self):

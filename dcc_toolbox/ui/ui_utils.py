@@ -132,7 +132,7 @@ QT UTILS END
 
 
 class WindowHandler(object):
-    pass
+    windows = []
 
 
 wh = WindowHandler()
@@ -150,8 +150,8 @@ if currently_using_maya:
         def __init__(self, parent=None):
             super(DockableWidget, self).__init__(parent=parent)
             self.setAttribute(QtCore.Qt.WA_DeleteOnClose, True)
-            self.setObjectName(self.docking_object_name)  # this one is important
             self.setWindowTitle('Custom Maya Mixin Workspace Control')
+            self.instance_number = 0
 
         def apply_ui_widget(self, widget):
             self.setCentralWidget(widget)
@@ -161,31 +161,26 @@ if currently_using_maya:
                                restore=False, restore_script="create_dockable_widget(restore=True)",
                                force_refresh=False
                                ):
-        if force_refresh:
-            if widget_class.docking_object_name in wh.__dict__.keys():
-                wh.__dict__.pop(widget_class.docking_object_name)
-
-            workspace_control_name = widget_class.docking_object_name + "WorkspaceControl"
-            if cmds.workspaceControl(workspace_control_name, q=True, exists=True):
-                cmds.workspaceControl(workspace_control_name, e=True, close=True)
-                cmds.deleteUI(workspace_control_name, control=True)
-
         if restore:
             # Grab the created workspace control with the following.
             restored_control = omui.MQtUtil.getCurrentParent()
 
-        widget_instance = wh.__dict__.get(widget_class.docking_object_name)
-
-        if widget_instance is None:
-            # Create a custom mixin widget for the first time
-            widget_instance = widget_class()  # type: DockableWidget
-            wh.__dict__[widget_class.docking_object_name] = widget_instance
+        # widget_instance = wh.__dict__.get(widget_class.docking_object_name)
+        widget_instance = widget_class(instance_number=len(wh.windows))  # type: DockableWidget
+        widget_instance.setObjectName("{}_{}".format(widget_class.docking_object_name, len(wh.windows)))
+        wh.windows.append(widget_instance)
 
         if restore:
             # Add custom mixin widget to the workspace control
-            mixin_ptr = omui.MQtUtil.findControl(widget_class.docking_object_name)
+            mixin_ptr = omui.MQtUtil.findControl(widget_instance.objectName())
             omui.MQtUtil.addWidgetToMayaLayout(long(mixin_ptr), long(restored_control))
         else:
+            # build from scratch
+            workspace_control_name = widget_instance.objectName() + "WorkspaceControl"
+            if cmds.workspaceControl(workspace_control_name, q=True, exists=True):
+                cmds.workspaceControl(workspace_control_name, e=True, close=True)
+                cmds.deleteUI(workspace_control_name, control=True)
+
             # Create a workspace control for the mixin widget by passing all the needed parameters.
             # See workspaceControl command documentation for all available flags.
             widget_instance.show(dockable=True, height=600, width=480, uiScript=restore_script)
@@ -204,6 +199,7 @@ else:
             self.setObjectName(self.docking_object_name)  # this one is important
             self.setWindowTitle('MotionBuilder Dockable Widget')
             self.setFloating(True)
+            self.instance_number = 0
 
         def apply_ui_widget(self, widget):
             self.setWidget(widget)
