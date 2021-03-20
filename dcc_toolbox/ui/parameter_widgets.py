@@ -31,7 +31,6 @@ class FloatDisplay(QtWidgets.QWidget):
         return self._value
 
     def set_value(self, value):
-
         # clamp within range
         if self.min_value is not None:
             value = max(value, self.min_value)
@@ -113,7 +112,7 @@ class FloatDisplay(QtWidgets.QWidget):
         if self.absolute:
             return percent * (self.max_value - self.min_value) + self.min_value
         else:
-            range_mult = self.max_value if self.max_value is not None else 1.0
+            range_mult = abs(self.max_value if self.max_value is not None else 1.0)
             return range_mult * percent
 
     def set_multiplier(self):
@@ -175,13 +174,14 @@ class TestParameters(QtWidgets.QMainWindow):
         delete_window(self)
         super(TestParameters, self).__init__(parent=get_app_window())
 
-        self.wid = FloatDisplay(min=0, max=1, absolute=True)
+        self.wid = FloatDisplay()
 
         main_layout = QtWidgets.QVBoxLayout()
         main_layout.addWidget(self.wid)
-        main_layout.addWidget(FloatDisplay())
-        main_layout.addWidget(FloatDisplay(min=-10, max=-5))
+        main_layout.addWidget(FloatDisplay(min=0, max=1, absolute=True))
         main_layout.addWidget(FloatDisplay(min=5, max=20))
+        main_layout.addWidget(FloatDisplay(min=-100, max=100))
+        main_layout.addWidget(FloatDisplay(min=-100, max=-50, default=-75))
         # main_layout.addWidget(QtWidgets.QPushButton("testing"))
 
         central_widget = QtWidgets.QWidget()
