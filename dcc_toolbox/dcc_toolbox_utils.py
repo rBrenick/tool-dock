@@ -1,6 +1,7 @@
 from functools import partial
 
 from dcc_toolbox.ui.ui_utils import QtCore, QtWidgets
+from dcc_toolbox.ui import parameter_widgets
 
 
 class ToolBoxItemBase(QtWidgets.QWidget):
@@ -92,23 +93,23 @@ class BaseParam(object):
 
 class FloatParam(BaseParam):
     def __init__(self, *args, **kwargs):
-        self.minimum = kwargs.get("min", -200000)
-        self.maximum = kwargs.get("max", 200000)
+        self.minimum = kwargs.get("min")
+        self.maximum = kwargs.get("max")
+        self.default = kwargs.get("default", 0.0)
         super(FloatParam, self).__init__(*args, **kwargs)
 
     def build_type_widgets(self):
-        self.spinbox = QtWidgets.QDoubleSpinBox()
-        self.spinbox.setStepType(QtWidgets.QDoubleSpinBox.AdaptiveDecimalStepType)
-        self.spinbox.setSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.MinimumExpanding)
-        self.spinbox.setMinimum(self.minimum)
-        self.spinbox.setMaximum(self.maximum)
-        self.main_layout.addWidget(self.spinbox)
+        self.float_widget = parameter_widgets.FloatDisplay(min=self.minimum,
+                                                           max=self.maximum,
+                                                           default=self.default)
+        self.float_widget.setSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.MinimumExpanding)
+        self.main_layout.addWidget(self.float_widget)
 
     def get_value(self):
-        return self.spinbox.value()
+        return self.float_widget.value()
 
     def set_value(self, val):
-        self.spinbox.setValue(val)
+        self.float_widget.set_value(val)
 
 
 class StringParam(BaseParam):
