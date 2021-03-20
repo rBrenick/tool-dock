@@ -45,6 +45,7 @@ class ToolBoxWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
         menu_bar = self.menuBar()  # type: QtWidgets.QMenuBar
         menu_bar.addAction("Configure", self.configure_toolbox)
         layout_menu = menu_bar.addMenu("Layout")
+        layout_menu.addAction("Set Window Name", self.ui_set_window_title)
         layout_menu.addAction("Save Layout", self.save_ui_settings)
         layout_menu.addAction("Load Layout", self.load_ui_settings)
 
@@ -96,6 +97,14 @@ class ToolBoxWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
 
             self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, dock)
             self.dock_widgets.append(dock)
+
+    def ui_set_window_title(self):
+        val, ok = QtWidgets.QInputDialog.getText(self, "New Window Title", "Enter New Title",
+                                                 QtWidgets.QLineEdit.Normal,
+                                                 text=ui_utils.get_window_title(self)
+                                                 )
+        if ok:
+            self.setWindowTitle(val)
 
     def load_ui_settings(self):
         window_geometry = self.settings.value(self.k_win_geometry)

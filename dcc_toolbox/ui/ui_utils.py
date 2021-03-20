@@ -187,6 +187,13 @@ if currently_using_maya:
 
         return widget_instance
 
+    def get_window_title(win):
+        workspace_control_name = win.objectName() + "WorkspaceControl"
+        if cmds.workspaceControl(workspace_control_name, q=True, exists=True):
+            return cmds.workspaceControl(workspace_control_name, q=True, label=True)
+
+        return win.windowTitle()
+
 else:
     # MotionBuilder
     class DockableWidget(QtWidgets.QDockWidget):
@@ -213,6 +220,8 @@ else:
         widget_instance.show()
         return widget_instance
 
+    def get_window_title(win):
+        return win.windowTitle()
 
 def build_menu_from_action_list(actions, menu=None, is_sub_menu=False):
     if not menu:

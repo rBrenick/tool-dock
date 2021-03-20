@@ -7,8 +7,17 @@ from dcc_toolbox import dcc_toolbox_utils as dtu
 class AutoSkin(dtu.ToolBoxItemBase):
     TOOL_NAME = "AutoSkin"
 
-    def run(self, argument_1=True, arg_2=3.0):
-        print(argument_1, arg_2)
+    def __init__(self, *args, **kwargs):
+        super(AutoSkin, self).__init__(*args, **kwargs)
+        self.float_arg = dtu.FloatParam(self, "Float")
+        self.str_arg = dtu.StringParam(self, "Example")
+        self.choice_arg = dtu.ChoiceParam(self, "Color", choices=["Red", "Green", "Blue"], default="Blue")
+
+    def run(self):
+        print(self.float_arg.get_value())
+        print(self.str_arg.get_value())
+        print(self.choice_arg.get_value())
+
 
 class AutoSkin2(dtu.ToolBoxItemBase):
     TOOL_NAME = "AutoSkin2"
