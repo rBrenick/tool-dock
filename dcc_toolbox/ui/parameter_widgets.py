@@ -18,11 +18,14 @@ class FloatDisplay(QtWidgets.QWidget):
 
         # internal variables
         self._multiplier = 1.0
+        self._move_delte = 0
         self._on_click_x_pos = 0
         self._on_click_value = 0
+        self._on_click_global_pos = None
 
         # set some display things on init
         self.set_value(self._value)
+        self.setCursor(QtCore.Qt.SplitHCursor)
 
     def value(self):
         return self._value
@@ -52,6 +55,7 @@ class FloatDisplay(QtWidgets.QWidget):
     # --------------------------------------------- LOGIC EVENTS ----------------------------------------
     def mousePressEvent(self, event):
         if event.buttons() == QtCore.Qt.LeftButton:
+            self._on_click_global_pos = event.globalPos()
             self._on_click_x_pos = event.x()
             self._on_click_value = self._value
             if self.absolute:
@@ -73,8 +77,16 @@ class FloatDisplay(QtWidgets.QWidget):
 
     def mouseMoveEvent(self, event):
         if event.buttons() == QtCore.Qt.LeftButton:
+            self.setCursor(QtCore.Qt.BlankCursor)
             self.set_multiplier()
             self.ui_mouse_set_value(event)
+            if not self.absolute:
+                QtGui.QCursor.setPos(self._on_click_global_pos)
+
+    def mouseReleaseEvent(self, event):
+        QtGui.QCursor.setPos(self._on_click_global_pos)
+        self.setCursor(QtCore.Qt.SplitHCursor)
+        self._move_delte = 0
 
     def ui_mouse_set_value(self, event):
         if self.absolute:
@@ -85,16 +97,21 @@ class FloatDisplay(QtWidgets.QWidget):
             # value as offset from the click position
             relative_value = self.ui_get_value_as_percent(event.x() - self._on_click_x_pos)
             relative_value = relative_value * self._multiplier
-            val = self._on_click_value + relative_value
+            self._move_delte += relative_value
+            val = self._on_click_value + self._move_delte
+
+            # convenience clamp so _move_delta doesn't go beyond range
+            if self.min_value is not None and val < self.min_value:
+                self._move_delte = self.min_value - self._on_click_value
+            if self.max_value is not None and val > self.max_value:
+                self._move_delte = self.max_value - self._on_click_value
+
         self.set_value(val)
 
     def ui_get_value_as_percent(self, value):
         percent = float(value) / self.size().width()
         if self.absolute:
-            m = float(self.size().width()) / (self.max_value - self.min_value)
-            # y = (m * value) - m * self.min_value
             return percent * (self.max_value - self.min_value) + self.min_value
-            # return percent
         else:
             range_mult = self.max_value if self.max_value is not None else 1.0
             return range_mult * percent
@@ -163,7 +180,7 @@ class TestParameters(QtWidgets.QMainWindow):
         main_layout = QtWidgets.QVBoxLayout()
         main_layout.addWidget(self.wid)
         main_layout.addWidget(FloatDisplay())
-        main_layout.addWidget(FloatDisplay(min=-5, max=36))
+        main_layout.addWidget(FloatDisplay(min=-10, max=-5))
         main_layout.addWidget(FloatDisplay(min=5, max=20))
         # main_layout.addWidget(QtWidgets.QPushButton("testing"))
 
