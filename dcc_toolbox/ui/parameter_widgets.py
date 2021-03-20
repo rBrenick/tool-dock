@@ -18,7 +18,7 @@ class FloatDisplay(QtWidgets.QWidget):
 
         # internal variables
         self._multiplier = 1.0
-        self._move_delte = 0
+        self._move_delta = 0
         self._on_click_x_pos = 0
         self._on_click_value = 0
         self._on_click_global_pos = None
@@ -85,7 +85,7 @@ class FloatDisplay(QtWidgets.QWidget):
     def mouseReleaseEvent(self, event):
         QtGui.QCursor.setPos(self._on_click_global_pos)
         self.setCursor(QtCore.Qt.SplitHCursor)
-        self._move_delte = 0
+        self._move_delta = 0
 
     def ui_mouse_set_value(self, event):
         if self.absolute:
@@ -96,14 +96,14 @@ class FloatDisplay(QtWidgets.QWidget):
             # value as offset from the click position
             relative_value = self.ui_get_value_as_percent(event.x() - self._on_click_x_pos)
             relative_value = relative_value * self._multiplier
-            self._move_delte += relative_value
-            val = self._on_click_value + self._move_delte
+            self._move_delta += relative_value
+            val = self._on_click_value + self._move_delta
 
             # convenience clamp so _move_delta doesn't go beyond range
             if self.min_value is not None and val < self.min_value:
-                self._move_delte = self.min_value - self._on_click_value
+                self._move_delta = self.min_value - self._on_click_value
             if self.max_value is not None and val > self.max_value:
-                self._move_delte = self.max_value - self._on_click_value
+                self._move_delta = self.max_value - self._on_click_value
 
         self.set_value(val)
 
