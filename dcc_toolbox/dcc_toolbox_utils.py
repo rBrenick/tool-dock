@@ -20,7 +20,7 @@ class RequiresValueType(object):
 class LocalConstants(object):
     # generate custom py scripts from folder
     dynamic_classes_generated = False
-    dynamic_script_names = []
+    dynamic_classes = {}
     scripts_folder = os.environ.get("TOOLBOX_SCRIPT_FOLDER", "D:/Google Drive/Scripting/_Scripts")
 
     def generate_dynamic_classes(self):
@@ -29,29 +29,29 @@ class LocalConstants(object):
 
         for script_path in get_script_paths(self.scripts_folder):
             script_name = os.path.splitext(os.path.basename(script_path))[0]
-            if script_name in self.dynamic_script_names:
+            if script_name in self.dynamic_classes.keys():
                 continue
 
-            make_class_from_script(script_path, tool_name=script_name)
+            script_cls = make_class_from_script(script_path, tool_name=script_name)
 
-            self.dynamic_script_names.append(script_name)
+            self.dynamic_classes[script_name] = script_cls
 
-        print("Generated: {} tool classes from files in:{}".format(len(self.dynamic_script_names), self.scripts_folder))
+        print("Generated: {} tool classes from files in: {}".format(len(self.dynamic_classes), self.scripts_folder))
         self.dynamic_classes_generated = True
 
 
 lk = LocalConstants()
 
 
-class ToolBoxItemBase(QtWidgets.QWidget):
+class _InternalToolBoxItemBase(QtWidgets.QWidget):
     """
-    Base Class for tools to inherit from
+    Internal Base Class for tools logic
     """
     TOOL_NAME = "TOOL"
     BACKGROUND_COLOR = None
 
     def __init__(self, *args, **kwargs):
-        super(ToolBoxItemBase, self).__init__(*args, **kwargs)
+        super(_InternalToolBoxItemBase, self).__init__(*args, **kwargs)
 
         self.main_layout = QtWidgets.QHBoxLayout()
         self.main_layout.setContentsMargins(0, 0, 0, 0)
@@ -169,6 +169,13 @@ class ToolBoxItemBase(QtWidgets.QWidget):
         return {}
 
 
+class ToolBoxItemBase(_InternalToolBoxItemBase):
+    """
+    Base Class for tools to inherit from
+    """
+    pass
+
+
 class ToolBoxSettings(QtCore.QSettings):
     def __init__(self):
         super(ToolBoxSettings, self).__init__(
@@ -197,19 +204,21 @@ def get_func_arguments(func):
 
 
 def all_subclasses(cls):
-    return set(cls.__subclasses__()).union(
-        [s for c in cls.__subclasses__() for s in all_subclasses(c)])
+    return set(cls.__subclasses__()).union([s for c in cls.__subclasses__() for s in all_subclasses(c)])
 
 
 def get_toolbox_item_classes():
     if not lk.dynamic_classes_generated:
         lk.generate_dynamic_classes()
+
     # get all base sub classes
-    return all_subclasses(ToolBoxItemBase)
+    subclasses = list(all_subclasses(ToolBoxItemBase))
+    subclasses.extend(lk.dynamic_classes.values())
+    return subclasses
 
 
 def make_class_from_script(script_path, tool_name):
-    class DynamicClass(ToolBoxItemBase):
+    class DynamicClass(_InternalToolBoxItemBase):
         TOOL_NAME = tool_name
 
         def run(self):
