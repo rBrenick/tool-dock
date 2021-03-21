@@ -88,7 +88,7 @@ class ToolBoxWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
 
         active_tools = self.settings.value(self.k_active_tools, defaultValue=list())
 
-        for toolbox_item_cls in dtu.all_subclasses(dtu.ToolBoxItemBase):
+        for toolbox_item_cls in dtu.get_toolbox_item_classes():
             if toolbox_item_cls.TOOL_NAME not in active_tools:  # only build for selected window actions
                 continue
 
@@ -128,7 +128,10 @@ class ToolBoxWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
             for dock_widget in self.dock_widgets:
                 tool_item = dock_widget.widget()  # type:dtu.ToolBoxItemBase
                 splitter_data = dock_splitters.get(tool_item.TOOL_NAME)
-                if not splitter_data or not isinstance(splitter_data, dict):
+                if not splitter_data:
+                    continue
+
+                if not isinstance(splitter_data, dict):
                     print("Could not restore splitter ui from: {}".format(splitter_data))
                     continue
 
@@ -145,7 +148,6 @@ class ToolBoxWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
                 tool_item = dock_widget.widget()  # type:dtu.ToolBoxItemBase
                 header_sizes = param_headers.get(tool_item.TOOL_NAME)
                 if not header_sizes:
-                    print("Could not restore parameter grid ui from: {}".format(header_sizes))
                     continue
                 tool_item.param_grid.set_header_sizes(header_sizes)
 
@@ -207,7 +209,7 @@ class ToolBoxConfigurationDialog(QtWidgets.QDialog):
 
     def fill_tool_list(self, active_tools):
         """Populate ListWidget with items"""
-        all_tool_names = sorted([cls.TOOL_NAME for cls in dtu.all_subclasses(dtu.ToolBoxItemBase)])
+        all_tool_names = sorted([cls.TOOL_NAME for cls in dtu.get_toolbox_item_classes()])
 
         for tool_name in all_tool_names:
             lwi = QtWidgets.QListWidgetItem(self.tools_LW)

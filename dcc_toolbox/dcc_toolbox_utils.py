@@ -1,5 +1,7 @@
 import collections
 import inspect
+import os
+import runpy
 import sys
 from functools import partial
 
@@ -13,6 +15,32 @@ background_form = "background-color:rgb({0}, {1}, {2})"
 class RequiresValueType(object):
     """Used to mark whether arguments have a default value specified"""
     pass
+
+
+class LocalConstants(object):
+    # generate custom py scripts from folder
+    dynamic_classes_generated = False
+    dynamic_script_names = []
+    scripts_folder = os.environ.get("TOOLBOX_SCRIPT_FOLDER", "D:/Google Drive/Scripting/_Scripts")
+
+    def generate_dynamic_classes(self):
+        if not self.scripts_folder or not os.path.exists(self.scripts_folder):
+            return
+
+        for script_path in get_script_paths(self.scripts_folder):
+            script_name = os.path.splitext(os.path.basename(script_path))[0]
+            if script_name in self.dynamic_script_names:
+                continue
+
+            make_class_from_script(script_path, tool_name=script_name)
+
+            self.dynamic_script_names.append(script_name)
+
+        print("Generated: {} tool classes from files in:{}".format(len(self.dynamic_script_names), self.scripts_folder))
+        self.dynamic_classes_generated = True
+
+
+lk = LocalConstants()
 
 
 class ToolBoxItemBase(QtWidgets.QWidget):
@@ -173,10 +201,25 @@ def all_subclasses(cls):
         [s for c in cls.__subclasses__() for s in all_subclasses(c)])
 
 
-"""
-def all_run_functions(cls):
-    for key, val in cls.__dict__.items():
-        if "run" in key and inspect.isfunction(val):
-            yield val
+def get_toolbox_item_classes():
+    if not lk.dynamic_classes_generated:
+        lk.generate_dynamic_classes()
+    # get all base sub classes
+    return all_subclasses(ToolBoxItemBase)
 
-"""
+
+def make_class_from_script(script_path, tool_name):
+    class DynamicClass(ToolBoxItemBase):
+        TOOL_NAME = tool_name
+
+        def run(self):
+            return runpy.run_path(script_path, init_globals=globals(), run_name="__main__")
+
+    return DynamicClass
+
+
+def get_script_paths(root_folder):
+    for folder, _, file_names in os.walk(root_folder):
+        for file_name in file_names:
+            if file_name.endswith(".py"):
+                yield os.path.join(folder, file_name)
