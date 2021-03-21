@@ -16,6 +16,19 @@ def reload_module(full_refresh=False):
     from . import dcc_toolbox_examples
     from . import dcc_toolbox_ui
 
+    # custom wonky reload things here
+    for toolbox_window in ui_utils.wh.windows:
+        to_remove = False
+        try:
+            if not toolbox_window.isVisible():
+                toolbox_window.deleteLater()
+                to_remove = True
+        except Exception as e:
+            to_remove = True
+        finally:
+            if to_remove:
+                ui_utils.wh.windows.remove(toolbox_window)
+
     if full_refresh:  # under conditional argument because WindowHandler class is defined here
         reload(ui_utils)
 

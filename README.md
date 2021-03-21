@@ -1,6 +1,8 @@
 # dcc-toolbox
 Customizable UI for quick DCC tool palettes
 
+![tool header image](docs/showcase.gif)
+
 ![tool header image](docs/header_image.png)
 
 # How it works
