@@ -49,22 +49,28 @@ class ToolBoxWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
         layout_menu.addAction("Save Layout", self.save_ui_settings)
         layout_menu.addAction("Load Layout", self.load_ui_settings)
 
+        # setting strings
         self.active_toolbox = "toolbox_{}".format(self.instance_number)
         self.k_active_tools = "{}/tools".format(self.active_toolbox)
         self.k_win_geometry = "{}/window_geometry".format(self.active_toolbox)
         self.k_win_state = "{}/window_state".format(self.active_toolbox)
+        self.k_tool_splitters = "{}/tool_splitters".format(self.active_toolbox)
+        self.k_param_grid_header = "{}/param_grid_header".format(self.active_toolbox)
 
+        # build dock widgets for all configured tools
         self.build_toolbox_display()
 
         self.load_ui_settings()
 
     def configure_toolbox(self):
+        """Choose which tools should be displayed for this toolbox"""
         active_tools = self.settings.value(self.k_active_tools, defaultValue=list())
         win = ToolBoxConfigurationDialog(self, active_tools=active_tools)
         win.config_saved.connect(self.save_user_toolbox)
         return win.show()
 
     def save_user_toolbox(self, tool_names):
+        """Save list of tool_names for this toolbox"""
         self.save_ui_settings()
         self.settings.setValue(self.k_active_tools, tool_names)
         self.build_toolbox_display()
@@ -93,6 +99,7 @@ class ToolBoxWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
             dock.setObjectName(dock_object_name)
 
             tool_widget = toolbox_item_cls()  # type:dtu.ToolBoxItemBase
+            tool_widget.post_init()
             dock.setWidget(tool_widget)
 
             self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, dock)
@@ -107,6 +114,7 @@ class ToolBoxWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
             self.setWindowTitle(val)
 
     def load_ui_settings(self):
+        # re-store dock widget layouts
         window_geometry = self.settings.value(self.k_win_geometry)
         window_state = self.settings.value(self.k_win_state)
         if window_geometry and window_state:
@@ -114,10 +122,44 @@ class ToolBoxWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
             self.restoreGeometry(window_geometry)
             self.restoreState(window_state)
 
+        # restore splitters between parameter_grid and run button
+        dock_splitters = self.settings.value(self.k_tool_splitters)
+        if dock_splitters:
+            for dock_widget in self.dock_widgets:
+                tool_item = dock_widget.widget()  # type:dtu.ToolBoxItemBase
+                splitter_size = dock_splitters.get(tool_item.TOOL_NAME)
+                if not splitter_size:
+                    continue
+                tool_item.main_splitter.setSizes(splitter_size)
+
+        # restore parameter_grid header sizes
+        param_headers = self.settings.value(self.k_param_grid_header)
+        if param_headers:
+            for dock_widget in self.dock_widgets:
+                tool_item = dock_widget.widget()  # type:dtu.ToolBoxItemBase
+                header_sizes = param_headers.get(tool_item.TOOL_NAME)
+                if not header_sizes:
+                    continue
+                tool_item.param_grid.set_header_sizes(header_sizes)
+
     def save_ui_settings(self):
+        # store dock widget layouts
         self.settings.setValue(self.k_win_geometry, self.saveGeometry())
         self.settings.setValue(self.k_win_state, self.saveState())
 
+        # store splitter size between parameter_grid and run button
+        # store size of parameter_grid header sections
+        tool_splitters = {}
+        param_headers = {}
+        for dock_widget in self.dock_widgets:  # type: QtWidgets.QDockWidget
+            tool_item = dock_widget.widget()  # type:dtu.ToolBoxItemBase
+            tool_splitters[tool_item.TOOL_NAME] = tool_item.main_splitter.sizes()
+            param_headers[tool_item.TOOL_NAME] = tool_item.param_grid.get_header_sizes()
+
+        self.settings.setValue(self.k_tool_splitters, tool_splitters)
+        self.settings.setValue(self.k_param_grid_header, param_headers)
+
+    # TODO: this event doesn't seem to trigger when using MayaQWidgetDockableMixin
     def closeEvent(self, event):
         self.save_ui_settings()
         super(ToolBoxWindow, self).closeEvent(event)
@@ -145,6 +187,9 @@ class ToolBoxConfigurationDialog(QtWidgets.QDialog):
         save_button = QtWidgets.QPushButton("Save")
         save_button.clicked.connect(self.save_actions)
         main_layout.addWidget(save_button)
+
+        # set to a nicer size
+        self.resize(QtCore.QSize(600, 400))
 
     def fill_tool_list(self, active_tools):
         """Populate ListWidget with items"""

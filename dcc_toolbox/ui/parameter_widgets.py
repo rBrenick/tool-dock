@@ -2,6 +2,8 @@ from .ui_utils import QtWidgets, QtCore, QtGui, get_app_window, delete_window
 
 
 class FloatDisplay(QtWidgets.QWidget):
+    value_set = QtCore.Signal(float)
+
     def __init__(self, min=None, max=None, default=0.0, absolute=False, precision=3, *args, **kwargs):
         super(FloatDisplay, self).__init__(*args, **kwargs)
         self.min_value = min
@@ -43,6 +45,9 @@ class FloatDisplay(QtWidgets.QWidget):
 
         # draw slider position
         self.repaint()
+
+        # emit signal
+        self.value_set.emit(value)
 
     def get_formatted_display_value(self, value):
         if value == 0:
@@ -179,7 +184,7 @@ class TestParameters(QtWidgets.QMainWindow):
         main_layout.addWidget(self.wid)
         main_layout.addWidget(FloatDisplay(min=0, max=1, absolute=True))
         main_layout.addWidget(FloatDisplay(min=5, max=20))
-        main_layout.addWidget(FloatDisplay(min=-100, max=100))
+        main_layout.addWidget(FloatDisplay(min=-100, max=100, precision=0))
         main_layout.addWidget(FloatDisplay(min=-100, max=-50, default=-75))
         # main_layout.addWidget(QtWidgets.QPushButton("testing"))
 

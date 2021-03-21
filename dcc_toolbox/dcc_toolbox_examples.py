@@ -1,69 +1,70 @@
 from dcc_toolbox import dcc_toolbox_utils as dtu
+from dcc_toolbox.ui import parameter_grid as pg
+from .ui.ui_utils import QtWidgets
 
 
 #####################################################
 # Example tools
 
-class AutoSkin(dtu.ToolBoxItemBase):
-    TOOL_NAME = "AutoSkin"
+class BasicAction(dtu.ToolBoxItemBase):
+    TOOL_NAME = "Basic Action"
+
+    def run(self):
+        print("triggered BasicAction")
+
+
+class BasicParamExample(dtu.ToolBoxItemBase):
+    TOOL_NAME = "Basic Params"
+
+    # function arguments can be extrapolated and automatically added as parameters
+    def run(self, arg_1=True, arg_2=3.0):
+        print(arg_1, arg_2)
+
+
+class ComplexParamExample(dtu.ToolBoxItemBase):
+    TOOL_NAME = "Complex Params"
 
     def __init__(self, *args, **kwargs):
-        super(AutoSkin, self).__init__(*args, **kwargs)
-        self.float_arg = dtu.FloatParam(self, "Float")
-        self.str_arg = dtu.StringParam(self, "Example")
-        self.choice_arg = dtu.ChoiceParam(self, "Color", choices=["Red", "Green", "Blue"], default="Blue")
+        super(ComplexParamExample, self).__init__(*args, **kwargs)
+
+        # parameters can also be defined like this
+        # ui will be auto generated and added to the parameter grid
+        self.float_param = pg.FloatParam(self.param_grid, "Float", min=0, max=1)
+        self.str_param = pg.StringParam(self.param_grid, "Example")
+        self.choice_param = pg.ChoiceParam(self.param_grid, "Color", choices=["Red", "Green", "Blue"], default="Blue")
+        self.bool_param = pg.BoolParam(self.param_grid, "Active", default=True)
 
     def run(self):
-        print(self.float_arg.get_value())
-        print(self.str_arg.get_value())
-        print(self.choice_arg.get_value())
+        # example of getting param values
+        print(self.float_param.get_value())
+        print(self.str_param.get_value())
+        print(self.choice_param.get_value())
+        print(self.bool_param.get_value())
 
 
-class AutoSkin2(dtu.ToolBoxItemBase):
-    TOOL_NAME = "AutoSkin2"
+class MultiButtonExample(dtu.ToolBoxItemBase):
+    TOOL_NAME = "Multi Buttons"
 
-    def run(self):
-        print(self.TOOL_NAME)
-
-
-class UpdateSkeleton(dtu.ToolBoxItemBase):
-    TOOL_NAME = "Update Skeleton"
-
-    def run(self, argument_1=True, arg_2=3.0):
-        print(argument_1, arg_2)
+    # multiple run buttons can be added like this
+    def get_tool_actions(self):
+        return {
+            "A": run_hide,
+            "B": run_show
+        }
 
 
-class UpdateSkeletonA(dtu.ToolBoxItemBase):
-    TOOL_NAME = "Update Skeleton_A"
+class OverrideWidgetExample(dtu.ToolBoxItemBase):
+    TOOL_NAME = "Custom Widget"
+
+    # if you want to be really fancy, you can override the widget creation like this
+    def build_ui_widget(self):
+        lw = QtWidgets.QListWidget()
+        lw.addItems(["Item1", "Item2", "Item3"])
+        return lw
 
 
-class UpdateSkeletonB(dtu.ToolBoxItemBase):
-    TOOL_NAME = "Update Skeleton_B"
-
-
-class UpdateSkeletonC(dtu.ToolBoxItemBase):
-    TOOL_NAME = "Update Skeleton_C"
-
-
-class UpdateSkeletonD(dtu.ToolBoxItemBase):
-    TOOL_NAME = "Update Skeleton_D"
-
-
-class UpdateSkeletonE(dtu.ToolBoxItemBase):
-    TOOL_NAME = "Update Skeleton_E"
-
-
-class UpdateSkeletonF(dtu.ToolBoxItemBase):
-    TOOL_NAME = "Update"
-
-
-class UpdateSkeletonG(dtu.ToolBoxItemBase):
-    TOOL_NAME = "Update Skeleton_G"
-
-
-class UpdateSkeletonH(dtu.ToolBoxItemBase):
-    TOOL_NAME = "Update Skeleton_H"
-
+#####################################################################################
+# Real use-cases
 
 class VtxColorsButtons(dtu.ToolBoxItemBase):
     TOOL_NAME = "ToggleVtxColors"
@@ -77,16 +78,6 @@ class VtxColorsButtons(dtu.ToolBoxItemBase):
 
 class ToggleLodsButtons(dtu.ToolBoxItemBase):
     TOOL_NAME = "ToggleLods"
-
-    def get_tool_actions(self):
-        return {
-            "Hide LODs": run_hide,
-            "Show LODs": run_show
-        }
-
-
-class MoreToggleLodsButtons(dtu.ToolBoxItemBase):
-    TOOL_NAME = "MoreToggleLods"
 
     def get_tool_actions(self):
         return {

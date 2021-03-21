@@ -1,10 +1,23 @@
+import collections
+import inspect
+import sys
 from functools import partial
 
+from dcc_toolbox.ui import parameter_grid
 from dcc_toolbox.ui.ui_utils import QtCore, QtWidgets
-from dcc_toolbox.ui import parameter_widgets
+
+PY_2 = sys.version_info[0] < 3
+
+
+class RequiresValueType(object):
+    """Used to mark whether arguments have a default value specified"""
+    pass
 
 
 class ToolBoxItemBase(QtWidgets.QWidget):
+    """
+    Base Class for tools to inherit from
+    """
     TOOL_NAME = "TOOL"
 
     def __init__(self, *args, **kwargs):
@@ -16,28 +29,89 @@ class ToolBoxItemBase(QtWidgets.QWidget):
 
         # if multiple actions defined for Tool
         self._tool_actions = self.get_tool_actions()
+        self._parameters_auto_generated = False
 
-        self.param_layout = QtWidgets.QVBoxLayout()
-        self.main_layout.addLayout(self.param_layout)
+        # Splitter between parameter_grid and 'run' buttons
+        self.main_splitter = QtWidgets.QSplitter()
 
+        # parameter grid
+        self.param_grid = parameter_grid.ParameterGrid()
+        self.param_grid.setSizePolicy(QtWidgets.QSizePolicy.Ignored, QtWidgets.QSizePolicy.Ignored)
+        self.main_splitter.addWidget(self.param_grid)
+
+        # build run buttons and add to splitter
+        ui_widget = self.build_ui_widget()
+        self.main_splitter.addWidget(ui_widget)
+
+        # default hide parameter grid
+        self.main_splitter.handle(1).setEnabled(False)
+        self.main_splitter.setSizes([0, 100])
+        self.main_layout.addWidget(self.main_splitter)
+
+    def auto_populate_parameters(self):
+        """Convenience function for generating parameters based on arguments of 'run'"""
+        run_arguments = get_func_arguments(self.run)
+
+        if not run_arguments:
+            return
+
+        for param_name, default_value in run_arguments.items():
+            if param_name == "self":  # ignore 'self' argument, should be safe-ish
+                run_arguments.pop(param_name)
+                continue
+
+            is_required = default_value == RequiresValueType
+            if is_required:
+                run_arguments[param_name] = str()  # fill to make sure every argument has something
+
+        if run_arguments:
+            self.param_grid.from_data(run_arguments)
+            self._parameters_auto_generated = True
+
+    def post_init(self):
+        # auto generate parameter widgets if run function has arguments
+        # skip if parameters have been manually defined
+        if not self.param_grid.parameters:
+            self.auto_populate_parameters()
+
+        # show parameter grid if parameters are defined
+        if self.param_grid.parameters:
+            self.main_splitter.handle(1).setEnabled(True)
+            self.main_splitter.setSizes([sys.maxint, sys.maxint])
+
+    def build_ui_widget(self):
+        """
+        Create buttons to execute run function
+        Can be overridden by subclasses
+        :return:
+        """
         if self._tool_actions:
+            multi_button_layout = QtWidgets.QHBoxLayout()
+            multi_button_layout.setContentsMargins(0, 0, 0, 0)
             for name, func in self._tool_actions.items():
                 btn = QtWidgets.QPushButton(name)
                 btn.setSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.MinimumExpanding)
 
                 btn.clicked.connect(partial(self._run, func))
-                self.main_layout.addWidget(btn)
+                multi_button_layout.addWidget(btn)
+
+            multi_button_widget = QtWidgets.QWidget()
+            multi_button_widget.setLayout(multi_button_layout)
+            main_widget = multi_button_widget
         else:
             btn = QtWidgets.QPushButton("{}".format(self.TOOL_NAME))
             btn.setSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.MinimumExpanding)
             btn.clicked.connect(self._run)
-            self.main_layout.addWidget(btn)
+            main_widget = btn
+        return main_widget
 
     def _run(self, func=None):
-        kwargs = {}
+        kwargs = {}  # maybe put something in here by default? not sure
         if func:
             func(**kwargs)
         else:
+            if self._parameters_auto_generated:
+                kwargs = self.param_grid.as_data()
             self.run(**kwargs)
 
     # to overwrite
@@ -49,9 +123,6 @@ class ToolBoxItemBase(QtWidgets.QWidget):
 
 
 class ToolBoxSettings(QtCore.QSettings):
-    k_window_geometry = "window/geometry"
-    k_window_state = "window/state"
-
     def __init__(self):
         super(ToolBoxSettings, self).__init__(
             QtCore.QSettings.IniFormat,
@@ -60,87 +131,22 @@ class ToolBoxSettings(QtCore.QSettings):
         )
 
 
-class BaseParam(object):
-    def __init__(self, base_cls, label, default=None, build_ui=True, *args, **kwargs):
-        self.base_cls = base_cls  # type: ToolBoxItemBase
-        self.label_text = label
+def get_func_arguments(func):
+    """ copied from https://github.com/rBrenick/argument-dialog """
+    if PY_2:
+        arg_spec = inspect.getargspec(func)
+    else:
+        arg_spec = inspect.getfullargspec(func)
 
-        if build_ui:
-            self.build_ui()
+    parameter_dict = collections.OrderedDict()
+    for param_name in arg_spec.args:
+        parameter_dict[param_name] = RequiresValueType  # argument has no default value, not even a 'None'
 
-        if default:
-            self.set_value(default)
+    if arg_spec.defaults:
+        for param_value, param_key in zip(arg_spec.defaults[::-1], reversed(parameter_dict.keys())):  # fill in defaults
+            parameter_dict[param_key] = param_value
 
-    def build_ui(self):
-        self.main_layout = QtWidgets.QHBoxLayout()
-        self.main_layout.setContentsMargins(0, 0, 0, 0)
-
-        self.param_label = QtWidgets.QLabel(self.label_text)
-        self.main_layout.addWidget(self.param_label)
-
-        self.base_cls.param_layout.addLayout(self.main_layout)
-        self.build_type_widgets()
-
-    def build_type_widgets(self):
-        raise NotImplementedError("build_type_widgets not implemented for: {}".format(self.__class__))
-
-    def get_value(self):
-        raise NotImplementedError("get_value not implemented for: {}".format(self.__class__))
-
-    def set_value(self, val):
-        raise NotImplementedError("set_value not implemented for: {}".format(self.__class__))
-
-
-class FloatParam(BaseParam):
-    def __init__(self, *args, **kwargs):
-        self.minimum = kwargs.get("min")
-        self.maximum = kwargs.get("max")
-        self.default = kwargs.get("default", 0.0)
-        super(FloatParam, self).__init__(*args, **kwargs)
-
-    def build_type_widgets(self):
-        self.float_widget = parameter_widgets.FloatDisplay(min=self.minimum,
-                                                           max=self.maximum,
-                                                           default=self.default)
-        self.float_widget.setSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.MinimumExpanding)
-        self.main_layout.addWidget(self.float_widget)
-
-    def get_value(self):
-        return self.float_widget.value()
-
-    def set_value(self, val):
-        self.float_widget.set_value(val)
-
-
-class StringParam(BaseParam):
-    def build_type_widgets(self):
-        self.line_edit = QtWidgets.QLineEdit()
-        self.line_edit.setSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.MinimumExpanding)
-        self.main_layout.addWidget(self.line_edit)
-
-    def get_value(self):
-        return self.line_edit.text()
-
-    def set_value(self, val):
-        self.line_edit.setText(val)
-
-
-class ChoiceParam(BaseParam):
-    def __init__(self, *args, **kwargs):
-        self.options = kwargs.get("choices", [])
-        super(ChoiceParam, self).__init__(*args, **kwargs)
-
-    def build_type_widgets(self):
-        self.combo_box = QtWidgets.QComboBox()
-        self.combo_box.setSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.MinimumExpanding)
-        self.combo_box.addItems(self.options)
-        self.main_layout.addWidget(self.combo_box)
-
-    def set_value(self, val):
-        self.combo_box.setCurrentText(val)
-
-    def get_value(self):
-        return self.combo_box.currentText()
+    return parameter_dict
 
 
 def all_subclasses(cls):
