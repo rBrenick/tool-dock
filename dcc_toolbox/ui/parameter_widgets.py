@@ -128,10 +128,6 @@ class FloatDisplay(QtWidgets.QWidget):
     def paintEvent(self, e):
         qp = QtGui.QPainter()
         qp.begin(self)
-        self.draw_widget(qp, e)
-        qp.end()
-
-    def draw_widget(self, qp, e):
 
         size = self.size()
         w = size.width()
@@ -141,9 +137,10 @@ class FloatDisplay(QtWidgets.QWidget):
         qp.setFont(font)
 
         # resize text to scale with widget
-        factor = float(h) / qp.fontMetrics().height()
-        if factor < 1 or factor > 1.25:
-            font.setPointSizeF(font.pointSizeF() * factor)
+        h_factor = float(h) / qp.fontMetrics().height()
+        w_factor = float(w) / qp.fontMetrics().width(self._display_value)
+        factor = min(h_factor, w_factor)  # the smaller value determines max text size
+        font.setPointSizeF(font.pointSizeF() * factor)
         qp.setFont(font)
 
         if self.max_value is None or self.min_value is None:
@@ -151,7 +148,7 @@ class FloatDisplay(QtWidgets.QWidget):
         else:
             # this took me way too long to figure out, even though it's just basic line equation
             m = float(w) / (self.max_value - self.min_value)
-            current_value_width = (m * self._value) - m * self.min_value
+            current_value_width = int((m * self._value) - m * self.min_value)
 
         qp.setPen(QtGui.QColor(20, 20, 20))
         qp.setBrush(QtGui.QColor(100, 100, 100))
@@ -166,6 +163,8 @@ class FloatDisplay(QtWidgets.QWidget):
         pen = QtGui.QPen(QtGui.QColor(200, 200, 200))
         qp.setPen(pen)
         qp.drawText(e.rect(), QtCore.Qt.AlignCenter, self._display_value)
+
+        qp.end()
 
 
 class TestParameters(QtWidgets.QMainWindow):
