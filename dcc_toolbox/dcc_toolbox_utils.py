@@ -4,9 +4,10 @@ import sys
 from functools import partial
 
 from dcc_toolbox.ui import parameter_grid
-from dcc_toolbox.ui.ui_utils import QtCore, QtWidgets
+from dcc_toolbox.ui.ui_utils import QtCore, QtWidgets, build_menu_from_action_list
 
 PY_2 = sys.version_info[0] < 3
+background_form = "background-color:rgb({0}, {1}, {2})"
 
 
 class RequiresValueType(object):
@@ -19,6 +20,7 @@ class ToolBoxItemBase(QtWidgets.QWidget):
     Base Class for tools to inherit from
     """
     TOOL_NAME = "TOOL"
+    BACKGROUND_COLOR = None
 
     def __init__(self, *args, **kwargs):
         super(ToolBoxItemBase, self).__init__(*args, **kwargs)
@@ -26,6 +28,14 @@ class ToolBoxItemBase(QtWidgets.QWidget):
         self.main_layout = QtWidgets.QHBoxLayout()
         self.main_layout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(self.main_layout)
+
+        # right click menu
+        self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.customContextMenuRequested.connect(self.open_context_menu)
+        self.context_menu_actions = [
+            {"Set Splitter - Vertical": partial(self.set_splitter_orientation, True)},
+            {"Set Splitter - Horizontal": partial(self.set_splitter_orientation, False)},
+        ]
 
         # if multiple actions defined for Tool
         self._tool_actions = self.get_tool_actions()
@@ -41,12 +51,17 @@ class ToolBoxItemBase(QtWidgets.QWidget):
 
         # build run buttons and add to splitter
         ui_widget = self.build_ui_widget()
+        if self.BACKGROUND_COLOR:
+            ui_widget.setStyleSheet(background_form.format(*self.BACKGROUND_COLOR))
         self.main_splitter.addWidget(ui_widget)
 
         # default hide parameter grid
         self.main_splitter.handle(1).setEnabled(False)
         self.main_splitter.setSizes([0, 100])
         self.main_layout.addWidget(self.main_splitter)
+
+    def open_context_menu(self):
+        return build_menu_from_action_list(self.context_menu_actions)
 
     def auto_populate_parameters(self):
         """Convenience function for generating parameters based on arguments of 'run'"""
@@ -67,6 +82,10 @@ class ToolBoxItemBase(QtWidgets.QWidget):
         if run_arguments:
             self.param_grid.from_data(run_arguments)
             self._parameters_auto_generated = True
+
+    def set_splitter_orientation(self, vertical=True):
+        orientation = QtCore.Qt.Vertical if vertical else QtCore.Qt.Horizontal
+        self.main_splitter.setOrientation(orientation)
 
     def post_init(self):
         # auto generate parameter widgets if run function has arguments
@@ -90,7 +109,7 @@ class ToolBoxItemBase(QtWidgets.QWidget):
             multi_button_layout.setContentsMargins(0, 0, 0, 0)
             for name, func in self._tool_actions.items():
                 btn = QtWidgets.QPushButton(name)
-                btn.setSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.MinimumExpanding)
+                btn.setSizePolicy(QtWidgets.QSizePolicy.Ignored, QtWidgets.QSizePolicy.MinimumExpanding)
 
                 btn.clicked.connect(partial(self._run, func))
                 multi_button_layout.addWidget(btn)
@@ -100,7 +119,7 @@ class ToolBoxItemBase(QtWidgets.QWidget):
             main_widget = multi_button_widget
         else:
             btn = QtWidgets.QPushButton("{}".format(self.TOOL_NAME))
-            btn.setSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.MinimumExpanding)
+            btn.setSizePolicy(QtWidgets.QSizePolicy.Ignored, QtWidgets.QSizePolicy.MinimumExpanding)
             btn.clicked.connect(self._run)
             main_widget = btn
         return main_widget

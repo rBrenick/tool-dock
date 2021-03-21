@@ -8,6 +8,7 @@ from .ui.ui_utils import QtWidgets
 
 class BasicAction(dtu.ToolBoxItemBase):
     TOOL_NAME = "Basic Action"
+    BACKGROUND_COLOR = (80, 120, 80)
 
     def run(self):
         print("triggered BasicAction")
@@ -23,6 +24,7 @@ class BasicParamExample(dtu.ToolBoxItemBase):
 
 class ComplexParamExample(dtu.ToolBoxItemBase):
     TOOL_NAME = "Complex Params"
+    BACKGROUND_COLOR = (50, 100, 160)
 
     def __init__(self, *args, **kwargs):
         super(ComplexParamExample, self).__init__(*args, **kwargs)
@@ -44,6 +46,7 @@ class ComplexParamExample(dtu.ToolBoxItemBase):
 
 class MultiButtonExample(dtu.ToolBoxItemBase):
     TOOL_NAME = "Multi Buttons"
+    BACKGROUND_COLOR = (160, 80, 20)
 
     # multiple run buttons can be added like this
     def get_tool_actions(self):

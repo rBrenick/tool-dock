@@ -114,7 +114,7 @@ class ToolBoxWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
             self.setWindowTitle(val)
 
     def load_ui_settings(self):
-        # re-store dock widget layouts
+        # restore dock widget layouts
         window_geometry = self.settings.value(self.k_win_geometry)
         window_state = self.settings.value(self.k_win_state)
         if window_geometry and window_state:
@@ -127,10 +127,16 @@ class ToolBoxWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
         if dock_splitters:
             for dock_widget in self.dock_widgets:
                 tool_item = dock_widget.widget()  # type:dtu.ToolBoxItemBase
-                splitter_size = dock_splitters.get(tool_item.TOOL_NAME)
-                if not splitter_size:
+                splitter_data = dock_splitters.get(tool_item.TOOL_NAME)
+                if not splitter_data or not isinstance(splitter_data, dict):
+                    print("Could not restore splitter ui from: {}".format(splitter_data))
                     continue
-                tool_item.main_splitter.setSizes(splitter_size)
+
+                s_sizes = splitter_data.get("sizes")
+                s_orientation = QtCore.Qt.Horizontal if splitter_data.get("orientation") == 1 else QtCore.Qt.Vertical
+
+                tool_item.main_splitter.setSizes(s_sizes)
+                tool_item.main_splitter.setOrientation(s_orientation)
 
         # restore parameter_grid header sizes
         param_headers = self.settings.value(self.k_param_grid_header)
@@ -139,6 +145,7 @@ class ToolBoxWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
                 tool_item = dock_widget.widget()  # type:dtu.ToolBoxItemBase
                 header_sizes = param_headers.get(tool_item.TOOL_NAME)
                 if not header_sizes:
+                    print("Could not restore parameter grid ui from: {}".format(header_sizes))
                     continue
                 tool_item.param_grid.set_header_sizes(header_sizes)
 
@@ -153,8 +160,15 @@ class ToolBoxWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
         param_headers = {}
         for dock_widget in self.dock_widgets:  # type: QtWidgets.QDockWidget
             tool_item = dock_widget.widget()  # type:dtu.ToolBoxItemBase
-            tool_splitters[tool_item.TOOL_NAME] = tool_item.main_splitter.sizes()
+
+            # save parameter_grid settings
             param_headers[tool_item.TOOL_NAME] = tool_item.param_grid.get_header_sizes()
+
+            # save main_splitter settings
+            splitter_data = dict()
+            splitter_data["sizes"] = tool_item.main_splitter.sizes()
+            splitter_data["orientation"] = tool_item.main_splitter.orientation()
+            tool_splitters[tool_item.TOOL_NAME] = splitter_data
 
         self.settings.setValue(self.k_tool_splitters, tool_splitters)
         self.settings.setValue(self.k_param_grid_header, param_headers)

@@ -80,7 +80,7 @@ class ParameterGrid(QtWidgets.QTreeView):
 
 class BaseParam(object):
     def __init__(self, param_grid, label, default=None, build_ui=True, *args, **kwargs):
-        self.param_grid = param_grid  # type: ToolBoxItemBase
+        self.param_grid = param_grid  # type: ParameterGrid
         self.label_text = label
 
         if build_ui:
