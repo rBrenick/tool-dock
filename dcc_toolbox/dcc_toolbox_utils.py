@@ -22,6 +22,7 @@ class LocalConstants(object):
     dynamic_classes_generated = False
     dynamic_classes = {}
     scripts_folder = os.environ.get("TOOLBOX_SCRIPT_FOLDER", "D:/Google Drive/Scripting/_Scripts")
+    generate_script_preview = True
 
     def generate_dynamic_classes(self):
         if not self.scripts_folder or not os.path.exists(self.scripts_folder):
@@ -48,7 +49,10 @@ class _InternalToolBoxItemBase(QtWidgets.QWidget):
     Internal Base Class for tools logic
     """
     TOOL_NAME = "TOOL"
+    TOOL_TIP = "TOOLTIP UNDEFINED"
     BACKGROUND_COLOR = None
+
+    SCRIPT_PATH = None  # used by dynamically generated classes
 
     def __init__(self, *args, **kwargs):
         super(_InternalToolBoxItemBase, self).__init__(*args, **kwargs)
@@ -217,9 +221,34 @@ def get_toolbox_item_classes():
     return subclasses
 
 
+def get_preview_from_script(script_path, max_line_count=None):
+    """
+    Open file and read a couple of lines
+    :param script_path: script file path
+    :type script_path: str
+    :param max_line_count: truncate preview to a certain line count
+    :type max_line_count: int
+    :return:
+    """
+    with open(script_path, "r") as fp:
+        script_lines = fp.readlines()
+
+    if max_line_count is None:
+        max_line_count = len(script_lines)
+
+    script_code = "".join(script_lines[:max_line_count])
+    if len(script_lines) > max_line_count:
+        script_code = "{}......".format(script_code)  # indicators that script is truncated
+
+    preview_str = "{}\n\n{}\n".format(script_path, script_code)
+    return preview_str
+
+
 def make_class_from_script(script_path, tool_name):
     class DynamicClass(_InternalToolBoxItemBase):
         TOOL_NAME = tool_name
+        TOOL_TIP = script_path
+        SCRIPT_PATH = script_path
 
         def run(self):
             return runpy.run_path(script_path, init_globals=globals(), run_name="__main__")

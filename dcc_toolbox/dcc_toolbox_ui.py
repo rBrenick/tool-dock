@@ -5,11 +5,12 @@ __modified__ = "2021-03-13"
 # Standard
 
 # Tool
-from dcc_toolbox import dcc_toolbox_utils as dtu
+import sys
 
+from dcc_toolbox import dcc_toolbox_utils as dtu
 # UI
 from dcc_toolbox.ui import ui_utils
-from dcc_toolbox.ui.ui_utils import QtCore, QtWidgets
+from dcc_toolbox.ui.ui_utils import QtCore, QtWidgets, QtGui
 
 try:
     # subclasses defined in here will be read on window initialization
@@ -88,7 +89,7 @@ class ToolBoxWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
 
         active_tools = self.settings.value(self.k_active_tools, defaultValue=list())
 
-        for toolbox_item_cls in dtu.get_toolbox_item_classes():
+        for toolbox_item_cls in dtu.get_toolbox_item_classes():  # type: dtu.ToolBoxItemBase
             if toolbox_item_cls.TOOL_NAME not in active_tools:  # only build for selected window actions
                 continue
 
@@ -101,6 +102,7 @@ class ToolBoxWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
             tool_widget = toolbox_item_cls()  # type:dtu.ToolBoxItemBase
             tool_widget.post_init()
             dock.setWidget(tool_widget)
+            dock.setToolTip(toolbox_item_cls.TOOL_TIP)
 
             self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, dock)
             self.dock_widgets.append(dock)
@@ -191,13 +193,30 @@ class ToolBoxConfigurationDialog(QtWidgets.QDialog):
         super(ToolBoxConfigurationDialog, self).__init__(parent=parent, *args, **kwargs)
         self.setWindowTitle("Toolbox Configuration")
 
+        self.tool_classes = {cls.TOOL_NAME: cls for cls in dtu.get_toolbox_item_classes()}
+
         main_layout = QtWidgets.QVBoxLayout()
         self.setLayout(main_layout)
 
+        # add splitter
+        self.main_splitter = QtWidgets.QSplitter()
+        main_layout.addWidget(self.main_splitter)
+
+        # add tool list
         self.tools_LW = QtWidgets.QListWidget()
+        self.tools_LW.itemSelectionChanged.connect(self.preview_script)
         self.tools_LW.itemDoubleClicked.connect(ui_utils.toggle_list_widget_item_checked)
         self.fill_tool_list(active_tools)
-        main_layout.addWidget(self.tools_LW)
+        self.main_splitter.addWidget(self.tools_LW)
+
+        # add preview tab
+        self.script_preview_TE = QtWidgets.QTextEdit()
+        self.script_preview_TE.setWordWrapMode(QtGui.QTextOption.NoWrap)
+        self.script_preview_TE.setText("Script Preview")
+        self.main_splitter.addWidget(self.script_preview_TE)
+
+        # divide splitter in half
+        self.main_splitter.setSizes([sys.maxint, sys.maxint])
 
         # Save Button
         save_button = QtWidgets.QPushButton("Save")
@@ -205,15 +224,34 @@ class ToolBoxConfigurationDialog(QtWidgets.QDialog):
         main_layout.addWidget(save_button)
 
         # set to a nicer size
-        self.resize(QtCore.QSize(600, 400))
+        self.resize(QtCore.QSize(700, 400))
+
+    def preview_script(self):
+        selected_items = self.tools_LW.selectedItems()
+        if not selected_items:
+            return
+
+        # last selected script will be previewed
+        item = selected_items[-1]
+
+        tool_cls = self.tool_classes.get(item.text())  # type: dtu.ToolBoxItemBase
+
+        if tool_cls.SCRIPT_PATH:
+            script_preview_text = dtu.get_preview_from_script(tool_cls.SCRIPT_PATH)
+        else:
+            script_preview_text = "Defined in: {}".format(tool_cls.__module__)
+
+        self.script_preview_TE.setText(script_preview_text)
 
     def fill_tool_list(self, active_tools):
         """Populate ListWidget with items"""
-        all_tool_names = sorted([cls.TOOL_NAME for cls in dtu.get_toolbox_item_classes()])
+        sorted_tool_names = sorted(self.tool_classes.keys())
 
-        for tool_name in all_tool_names:
+        for tool_name in sorted_tool_names:
+            tool_cls = self.tool_classes.get(tool_name)  # type: dtu.ToolBoxItemBase
             lwi = QtWidgets.QListWidgetItem(self.tools_LW)
             lwi.setText(tool_name)
+            lwi.setToolTip(tool_cls.TOOL_TIP)
             lwi.setFlags(lwi.flags() | QtCore.Qt.ItemIsUserCheckable)
             lwi.setCheckState(QtCore.Qt.Unchecked)
 
