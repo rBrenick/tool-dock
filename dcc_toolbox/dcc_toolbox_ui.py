@@ -21,10 +21,10 @@ except Exception as e:
 class ToolBoxWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
     docking_object_name = "ToolBox"
 
-    def __init__(self, instance_number=0, *args, **kwargs):
+    def __init__(self, window_index=0, *args, **kwargs):
         super(ToolBoxWindow, self).__init__(*args, **kwargs)
-        self.instance_number = instance_number
-        self.setWindowTitle("ToolBoxWindow_{}".format(self.instance_number))
+        self.window_index = window_index
+        self.setWindowTitle("ToolBoxWindow_{}".format(self.window_index))
 
         self.dock_widgets = []
         self.settings = dtu.ToolBoxSettings()
@@ -50,12 +50,12 @@ class ToolBoxWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
         layout_menu.addAction("Load Layout", self.load_ui_settings)
 
         # setting strings
-        self.active_toolbox = "toolbox_{}".format(self.instance_number)
+        self.active_toolbox = "toolbox_{}".format(self.window_index)
         self.k_active_tools = "{}/tools".format(self.active_toolbox)
         self.k_win_geometry = "{}/window_geometry".format(self.active_toolbox)
         self.k_win_state = "{}/window_state".format(self.active_toolbox)
         self.k_tool_splitters = "{}/tool_splitters".format(self.active_toolbox)
-        self.k_param_grid_header = "{}/param_grid_header".format(self.active_toolbox)
+        self.k_param_grid_ui = "{}/param_grid".format(self.active_toolbox)
 
         # build dock widgets for all configured tools
         self.build_toolbox_display()
@@ -95,7 +95,7 @@ class ToolBoxWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
             dock = QtWidgets.QDockWidget(toolbox_item_cls.TOOL_NAME, self)
 
             clean_tool_name = toolbox_item_cls.__name__.replace(" ", "_")
-            dock_object_name = "{}_{}_QtObject".format(clean_tool_name, self.instance_number)
+            dock_object_name = "{}_{}_QtObject".format(clean_tool_name, self.window_index)
             dock.setObjectName(dock_object_name)
 
             tool_widget = toolbox_item_cls()  # type:dtu.ToolBoxItemBase
@@ -142,14 +142,14 @@ class ToolBoxWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
                 tool_item.main_splitter.setOrientation(s_orientation)
 
         # restore parameter_grid header sizes
-        param_headers = self.settings.value(self.k_param_grid_header)
-        if param_headers:
+        parameter_grid_ui_settings = self.settings.value(self.k_param_grid_ui)
+        if parameter_grid_ui_settings:
             for dock_widget in self.dock_widgets:
                 tool_item = dock_widget.widget()  # type:dtu.ToolBoxItemBase
-                header_sizes = param_headers.get(tool_item.TOOL_NAME)
-                if not header_sizes:
+                tool_param_grid = parameter_grid_ui_settings.get(tool_item.TOOL_NAME)
+                if not tool_param_grid:
                     continue
-                tool_item.param_grid.set_header_sizes(header_sizes)
+                tool_item.param_grid.set_ui_settings(tool_param_grid)
 
     def save_ui_settings(self):
         # store dock widget layouts
@@ -159,12 +159,12 @@ class ToolBoxWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
         # store splitter size between parameter_grid and run button
         # store size of parameter_grid header sections
         tool_splitters = {}
-        param_headers = {}
+        parameter_grids = {}
         for dock_widget in self.dock_widgets:  # type: QtWidgets.QDockWidget
             tool_item = dock_widget.widget()  # type:dtu.ToolBoxItemBase
 
             # save parameter_grid settings
-            param_headers[tool_item.TOOL_NAME] = tool_item.param_grid.get_header_sizes()
+            parameter_grids[tool_item.TOOL_NAME] = tool_item.param_grid.get_ui_settings()
 
             # save main_splitter settings
             splitter_data = dict()
@@ -173,7 +173,7 @@ class ToolBoxWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
             tool_splitters[tool_item.TOOL_NAME] = splitter_data
 
         self.settings.setValue(self.k_tool_splitters, tool_splitters)
-        self.settings.setValue(self.k_param_grid_header, param_headers)
+        self.settings.setValue(self.k_param_grid_ui, parameter_grids)
 
     # TODO: this event doesn't seem to trigger when using MayaQWidgetDockableMixin
     def closeEvent(self, event):
@@ -231,13 +231,14 @@ class ToolBoxConfigurationDialog(QtWidgets.QDialog):
         return checked_tool_names
 
 
-def main(restore=False, force_refresh=False):
-    restore_script = "import dcc_toolbox; dcc_toolbox.main(restore=True)"
+def main(restore=False, force_refresh=False, index=None):
+    restore_script = "import dcc_toolbox; dcc_toolbox.main(restore=True, index={})"
 
     return ui_utils.create_dockable_widget(ToolBoxWindow,
                                            restore=restore,
                                            restore_script=restore_script,
-                                           force_refresh=force_refresh
+                                           force_refresh=force_refresh,
+                                           window_index=index
                                            )
 
 

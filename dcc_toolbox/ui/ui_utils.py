@@ -132,7 +132,8 @@ QT UTILS END
 
 
 class WindowHandler(object):
-    windows = []
+    windows = {}
+    window_index_limit = 100
 
 
 wh = WindowHandler()
@@ -151,7 +152,7 @@ if currently_using_maya:
             super(DockableWidget, self).__init__(parent=parent)
             self.setAttribute(QtCore.Qt.WA_DeleteOnClose, True)
             self.setWindowTitle('Custom Maya Mixin Workspace Control')
-            self.instance_number = 0
+            self.window_index = 0
 
         def apply_ui_widget(self, widget):
             self.setCentralWidget(widget)
@@ -159,16 +160,29 @@ if currently_using_maya:
 
     def create_dockable_widget(widget_class,
                                restore=False, restore_script="create_dockable_widget(restore=True)",
-                               force_refresh=False
+                               force_refresh=False, window_index=None
                                ):
         if restore:
             # Grab the created workspace control with the following.
             restored_control = omui.MQtUtil.getCurrentParent()
 
+        if window_index is None:
+            existing_window_indices = list(wh.windows.keys())
+            for i in range(wh.window_index_limit):
+                if i not in existing_window_indices:  # if index is not taken by another window, use it
+                    window_index = i
+                    break
+
+            if window_index is None:
+                print("Failed to find free window_index. Has limit: {} been reached?".format(wh.window_index_limit))
+                return
+
+        restore_script = restore_script.format(window_index)
+
         # widget_instance = wh.__dict__.get(widget_class.docking_object_name)
-        widget_instance = widget_class(instance_number=len(wh.windows))  # type: DockableWidget
-        widget_instance.setObjectName("{}_{}".format(widget_class.docking_object_name, len(wh.windows)))
-        wh.windows.append(widget_instance)
+        widget_instance = widget_class(window_index=window_index)  # type: DockableWidget
+        widget_instance.setObjectName("{}_{}".format(widget_class.docking_object_name, window_index))
+        wh.windows[window_index] = widget_instance
 
         if restore:
             # Add custom mixin widget to the workspace control
@@ -207,7 +221,7 @@ else:
             self.setObjectName(self.docking_object_name)  # this one is important
             self.setWindowTitle('MotionBuilder Dockable Widget')
             self.setFloating(True)
-            self.instance_number = 0
+            self.window_index = 0
 
         def apply_ui_widget(self, widget):
             self.setWidget(widget)
@@ -215,7 +229,7 @@ else:
 
     def create_dockable_widget(widget_class,
                                restore=False, restore_script="create_dockable_widget(restore=True)",
-                               force_refresh=False
+                               force_refresh=False, window_index=None
                                ):
         widget_instance = widget_class()
         widget_instance.show()

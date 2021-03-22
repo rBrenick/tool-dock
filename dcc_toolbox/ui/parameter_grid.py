@@ -23,6 +23,7 @@ class ParameterGrid(QtWidgets.QTreeView):
 
     def add_param(self, param):
         """
+        Add parameter (subclassed from BaseParam) to the grid
 
         :param param:
         :type param: BaseParam
@@ -67,15 +68,42 @@ class ParameterGrid(QtWidgets.QTreeView):
             out_data[param.label_text] = param.get_value()
         return out_data
 
-    def get_header_sizes(self):
+    def set_values_from_data(self, parameter_values):
+        """
+        :type parameter_values: dict
+        """
+        for param in self.parameters:  # type: BaseParam
+            value = parameter_values.get(param.label_text)
+            if value is None:
+                continue
+            param.set_value(value)
+
+    def get_ui_settings(self):
+        ui_info = {}
         header_sizes = []
         for col in range(self._model.columnCount()):
             header_sizes.append(self.header().sectionSize(col))
-        return header_sizes
+        ui_info["header_sizes"] = header_sizes
+        ui_info["parameter_values"] = self.as_data()
+        return ui_info
 
-    def set_header_sizes(self, sizes):
+    def set_ui_settings(self, ui_info, set_parameter_value=True):
+        """
+        Restore UI from info gathered via self.get_ui_settings
+
+        :param ui_info:
+        :type ui_info: dict
+        :param set_parameter_value:
+        :return:
+        """
+        # optionally set the values of the parameters
+        if set_parameter_value:
+            parameter_values = ui_info.get("parameter_values", {})
+            self.set_values_from_data(parameter_values)
+
+        header_sizes = ui_info.get("header_sizes")
         for col in range(self._model.columnCount()):
-            self.header().resizeSection(col, sizes[col])
+            self.header().resizeSection(col, header_sizes[col])
 
 
 class BaseParam(object):

@@ -88,10 +88,10 @@ class FloatDisplay(QtWidgets.QWidget):
                 QtGui.QCursor.setPos(self._on_click_global_pos)
 
     def mouseReleaseEvent(self, event):
+        self._move_delta = 0
+        self.setCursor(QtCore.Qt.SplitHCursor)
         if event.buttons() == QtCore.Qt.LeftButton:
             QtGui.QCursor.setPos(self._on_click_global_pos)
-            self.setCursor(QtCore.Qt.SplitHCursor)
-            self._move_delta = 0
 
     def ui_mouse_set_value(self, event):
         if self.absolute:
