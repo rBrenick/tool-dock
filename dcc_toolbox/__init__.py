@@ -13,7 +13,7 @@ def reload_module(full_refresh=False):
 
     from .ui import ui_utils
     from . import dcc_toolbox_utils
-    from . import dcc_toolbox_examples
+    from dcc_toolbox.examples import dcc_toolbox_examples
     from . import dcc_toolbox_ui
 
     # custom wonky reload things here

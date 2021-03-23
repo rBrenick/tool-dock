@@ -21,24 +21,48 @@ class LocalConstants(object):
     # generate custom py scripts from folder
     dynamic_classes_generated = False
     dynamic_classes = {}
-    scripts_folder = os.environ.get("TOOLBOX_SCRIPT_FOLDER", "D:/Google Drive/Scripting/_Scripts")
-    generate_script_preview = True
+
+    env_extra_modules = "DCC_TOOLBOX_EXTRA_MODULES"
+    env_script_folders = "DCC_TOOLBOX_SCRIPT_FOLDERS"
+
+    # a base scripts folder can be defined via this environment variable
+    # script files in this folder structure will be added as dynamic classes
+    script_folders = os.environ.get(env_script_folders, "D:/Google Drive/Scripting/_Scripts")
 
     def generate_dynamic_classes(self):
-        if not self.scripts_folder or not os.path.exists(self.scripts_folder):
+        if not self.script_folders:
             return
 
-        for script_path in get_script_paths(self.scripts_folder):
-            script_name = os.path.splitext(os.path.basename(script_path))[0]
-            if script_name in self.dynamic_classes.keys():
+        for script_folder in self.script_folders.split(";"):
+            if not script_folder:  # ignore empty strings
                 continue
 
-            script_cls = make_class_from_script(script_path, tool_name=script_name)
+            if not os.path.exists(script_folder):
+                continue
 
-            self.dynamic_classes[script_name] = script_cls
+            self.dynamic_classes_from_script_folder(script_folder)
 
-        print("Generated: {} tool classes from files in: {}".format(len(self.dynamic_classes), self.scripts_folder))
+        if len(self.dynamic_classes.keys()) > 0:
+            print("Generated: {} tool classes from files in: {}".format(len(self.dynamic_classes), self.script_folders))
+
         self.dynamic_classes_generated = True
+
+    def dynamic_classes_from_script_folder(self, script_folder):
+        """Find all scripts in folder structure and add them as tool classes"""
+        for script_path in get_paths_in_folder(script_folder, extension_filter=".py"):
+            self.dynamic_class_from_script(script_path)
+
+    # for dynamic class creation in custom modules
+    def dynamic_class_from_script(self, script_path):
+        script_name = os.path.splitext(os.path.basename(script_path))[0]
+        if script_name in self.dynamic_classes.keys():
+            return
+
+        script_cls = make_class_from_script(script_path, tool_name=script_name)
+
+        self.dynamic_classes[script_name] = script_cls
+
+        return script_cls
 
 
 lk = LocalConstants()
@@ -256,8 +280,8 @@ def make_class_from_script(script_path, tool_name):
     return DynamicClass
 
 
-def get_script_paths(root_folder):
+def get_paths_in_folder(root_folder, extension_filter=""):
     for folder, _, file_names in os.walk(root_folder):
         for file_name in file_names:
-            if file_name.endswith(".py"):
+            if file_name.endswith(extension_filter):
                 yield os.path.join(folder, file_name)

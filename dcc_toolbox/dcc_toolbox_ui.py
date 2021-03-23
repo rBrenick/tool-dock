@@ -5,6 +5,8 @@ __modified__ = "2021-03-13"
 # Standard
 
 # Tool
+import importlib
+import os
 import sys
 
 from dcc_toolbox import dcc_toolbox_utils as dtu
@@ -14,7 +16,18 @@ from dcc_toolbox.ui.ui_utils import QtCore, QtWidgets, QtGui
 
 try:
     # subclasses defined in here will be read on window initialization
-    from dcc_toolbox import dcc_toolbox_examples
+    from dcc_toolbox.examples import dcc_toolbox_examples
+
+    # Extra module paths can be defined via this environment variable
+    # These paths will then be imported on startup
+    # for use by pipelines that wish to add their own tools in this system
+    for module_import_str in os.environ.get(dtu.lk.env_extra_modules, "").split(";"):
+        if module_import_str:  # if not an empty string
+            importlib.import_module(module_import_str)
+
+    # Example of how to set the variable (this would have to happen before the DCC starts up, or early in it)
+    # os.environ["DCC_TOOLBOX_EXTRA_MODULES"] = "a_module;another_module"
+
 except Exception as e:
     print(e)
 
@@ -120,7 +133,7 @@ class ToolBoxWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
         window_geometry = self.settings.value(self.k_win_geometry)
         window_state = self.settings.value(self.k_win_state)
         if window_geometry and window_state:
-            print("loading ui settings: {}".format(self.k_active_tools))
+            print("loading ui settings: {}".format(self.active_toolbox))
             self.restoreGeometry(window_geometry)
             self.restoreState(window_state)
 
@@ -176,6 +189,7 @@ class ToolBoxWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
 
         self.settings.setValue(self.k_tool_splitters, tool_splitters)
         self.settings.setValue(self.k_param_grid_ui, parameter_grids)
+        print("Saved UI settings {}".format(self.active_toolbox))
 
     # TODO: this event doesn't seem to trigger when using MayaQWidgetDockableMixin
     def closeEvent(self, event):

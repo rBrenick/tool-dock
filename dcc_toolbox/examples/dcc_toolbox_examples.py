@@ -1,6 +1,9 @@
+import os
+import sys
+
 from dcc_toolbox import dcc_toolbox_utils as dtu
 from dcc_toolbox.ui import parameter_grid as pg
-from .ui.ui_utils import QtWidgets
+from dcc_toolbox.ui.ui_utils import QtWidgets
 
 
 #####################################################
@@ -51,8 +54,8 @@ class MultiButtonExample(dtu.ToolBoxItemBase):
     # multiple run buttons can be added like this
     def get_tool_actions(self):
         return {
-            "A": run_hide,
-            "B": run_show
+            "A": lambda: sys.stdout.write("A triggered\n"),
+            "B": lambda: sys.stdout.write("B triggered\n")
         }
 
 
@@ -66,32 +69,9 @@ class OverrideWidgetExample(dtu.ToolBoxItemBase):
         return lw
 
 
-#####################################################################################
-# Real use-cases
+# tool classes can also be created from script paths like this
+simple_script_path = os.path.join(os.path.dirname(__file__), "simple_script_example.py")
+simple_script_cls = dtu.lk.dynamic_class_from_script(simple_script_path)
 
-class VtxColorsButtons(dtu.ToolBoxItemBase):
-    TOOL_NAME = "ToggleVtxColors"
-
-    def get_tool_actions(self):
-        return {
-            "Hide": run_hide,
-            "Show": run_show
-        }
-
-
-class ToggleLodsButtons(dtu.ToolBoxItemBase):
-    TOOL_NAME = "ToggleLods"
-
-    def get_tool_actions(self):
-        return {
-            "Hide LODs": run_hide,
-            "Show LODs": run_show
-        }
-
-
-def run_hide():
-    print("hiding")
-
-
-def run_show():
-    print("showing")
+# you can then set properties of the class like this
+simple_script_cls.BACKGROUND_COLOR = (100, 100, 150)
