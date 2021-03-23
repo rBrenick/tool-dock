@@ -18,7 +18,7 @@ Classes with a *get_tool_actions* function defined will be added as individual b
 
 # Extra Environment Variables
 
-*DCC_TOOLBOX_SCRIPT_FOLDERS* defines a root folders for extra scripts that will be added as tools.
+*DCC_TOOLBOX_SCRIPT_FOLDERS* defines root folders for extra scripts that will be added as tools.
 
 *DCC_TOOLBOX_EXTRA_MODULES* defines extra modules to be imported on tool startup. Tools can be defined in these modules, which will then be available in the configurations.  
 
