@@ -41,7 +41,8 @@ class ToolBoxWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
         self.setWindowTitle("ToolBoxWindow_{}".format(self.window_index))
 
         self.dock_widgets = []
-        self.settings = dtu.ToolBoxSettings()
+        self.title_bar_widgets = {}
+        self.settings = dtu.ToolBoxSettings(QtCore.QSettings.IniFormat, QtCore.QSettings.UserScope, 'dcc_toolbox')
 
         # add a static widget to dock other widgets around
         self.central_widget = QtWidgets.QWidget()
@@ -58,16 +59,23 @@ class ToolBoxWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
         # create docks for each subclassed tool widget
         menu_bar = self.menuBar()  # type: QtWidgets.QMenuBar
         menu_bar.addAction("Configure", self.configure_toolbox)
-        layout_menu = menu_bar.addMenu("Layout")
+        layout_menu = menu_bar.addMenu("Layout")  # type: QtWidgets.QMenu
         layout_menu.addAction("Set Window Name", self.ui_set_window_title)
+        layout_menu.addAction("Lock Layout", self.ui_lock_layout)
+        layout_menu.addAction("Unlock Layout", self.ui_unlock_layout)
+        layout_menu.addSeparator()
         layout_menu.addAction("Save Layout", self.save_ui_settings)
         layout_menu.addAction("Load Layout", self.load_ui_settings)
+        layout_menu.addSeparator()
+        layout_menu.addAction("Save Layout File", self.save_settings_to_file)
+        layout_menu.addAction("Load Layout File", self.load_settings_from_file)
 
         # setting strings
         self.active_toolbox = "toolbox_{}".format(self.window_index)
         self.k_active_tools = "{}/tools".format(self.active_toolbox)
         self.k_win_geometry = "{}/window_geometry".format(self.active_toolbox)
         self.k_win_state = "{}/window_state".format(self.active_toolbox)
+        self.k_layout_locked = "{}/layout_locked".format(self.active_toolbox)
         self.k_tool_splitters = "{}/tool_splitters".format(self.active_toolbox)
         self.k_param_grid_ui = "{}/param_grid".format(self.active_toolbox)
 
@@ -75,6 +83,12 @@ class ToolBoxWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
         self.build_toolbox_display()
 
         self.load_ui_settings()
+
+        # a timer can also be used for triggering the load settings
+        # for some reason this sometimes works better than any qt refresh option
+        self.load_ui_settings_timer = QtCore.QTimer()
+        self.load_ui_settings_timer.setSingleShot(True)
+        self.load_ui_settings_timer.timeout.connect(self.load_ui_settings)
 
     def configure_toolbox(self):
         """Choose which tools should be displayed for this toolbox"""
@@ -109,7 +123,7 @@ class ToolBoxWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
             dock = QtWidgets.QDockWidget(toolbox_item_cls.TOOL_NAME, self)
 
             clean_tool_name = toolbox_item_cls.__name__.replace(" ", "_")
-            dock_object_name = "{}_{}_QtObject".format(clean_tool_name, self.window_index)
+            dock_object_name = "{0}_QtObject".format(clean_tool_name)
             dock.setObjectName(dock_object_name)
 
             tool_widget = toolbox_item_cls()  # type:dtu.ToolBoxItemBase
@@ -119,14 +133,6 @@ class ToolBoxWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
 
             self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, dock)
             self.dock_widgets.append(dock)
-
-    def ui_set_window_title(self):
-        val, ok = QtWidgets.QInputDialog.getText(self, "New Window Title", "Enter New Title",
-                                                 QtWidgets.QLineEdit.Normal,
-                                                 text=ui_utils.get_window_title(self)
-                                                 )
-        if ok:
-            self.setWindowTitle(val)
 
     def load_ui_settings(self):
         # restore dock widget layouts
@@ -166,6 +172,9 @@ class ToolBoxWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
                     continue
                 tool_item.param_grid.set_ui_settings(tool_param_grid)
 
+        if self.settings.get_value(self.k_layout_locked, default=False):
+            self.ui_lock_layout()
+
     def save_ui_settings(self):
         # store dock widget layouts
         self.settings.setValue(self.k_win_geometry, self.saveGeometry())
@@ -190,6 +199,49 @@ class ToolBoxWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
         self.settings.setValue(self.k_tool_splitters, tool_splitters)
         self.settings.setValue(self.k_param_grid_ui, parameter_grids)
         print("Saved UI settings {}".format(self.active_toolbox))
+
+    def ui_set_window_title(self):
+        val, ok = QtWidgets.QInputDialog.getText(self, "New Window Title", "Enter New Title",
+                                                 QtWidgets.QLineEdit.Normal,
+                                                 text=ui_utils.get_window_title(self)
+                                                 )
+        if ok:
+            self.setWindowTitle(val)
+
+    def ui_lock_layout(self):
+        for dock in self.dock_widgets:  # type:QtWidgets.QDockWidget
+            self.title_bar_widgets[dock] = dock.titleBarWidget()
+            dock.setTitleBarWidget(QtWidgets.QWidget(dock))
+        self.settings.setValue(self.k_layout_locked, True)
+
+    def ui_unlock_layout(self):
+        for dock, dock_title_bar in self.title_bar_widgets.items():  # type:QtWidgets.QDockWidget
+            try:
+                dock.setTitleBarWidget(dock_title_bar)
+            except RuntimeError as e:
+                print(e)
+        self.title_bar_widgets.clear()
+        self.settings.setValue(self.k_layout_locked, False)
+
+    def save_settings_to_file(self):
+        self.save_ui_settings()
+        new_path = dtu.save_toolbox_settings(self.settings, current_toolbox=self.active_toolbox)
+        if new_path:
+            print("Saved Layout to: {}".format(new_path))
+
+    def load_settings_from_file(self):
+        load_success = dtu.load_toolbox_settings(target_settings=self.settings,
+                                                 target_toolbox=self.active_toolbox)
+        if load_success:
+            self.build_toolbox_display()
+            # Wut? for some reason just putting this in a timer works while the other refresh functions don't
+            self.load_ui_settings_timer.start(1)
+            # ui_utils.process_q_events()
+            # self.update()
+            # self.repaint()
+            # self.resize(self.size())
+            # self.updateGeometry()
+            # self.load_ui_settings()
 
     # TODO: this event doesn't seem to trigger when using MayaQWidgetDockableMixin
     def closeEvent(self, event):

@@ -6,7 +6,8 @@ import sys
 from functools import partial
 
 from dcc_toolbox.ui import parameter_grid
-from dcc_toolbox.ui.ui_utils import QtCore, QtWidgets, build_menu_from_action_list
+from dcc_toolbox.ui import ui_utils
+from dcc_toolbox.ui.ui_utils import QtCore, QtWidgets
 
 PY_2 = sys.version_info[0] < 3
 background_form = "background-color:rgb({0}, {1}, {2})"
@@ -117,7 +118,7 @@ class _InternalToolBoxItemBase(QtWidgets.QWidget):
         self.main_layout.addWidget(self.main_splitter)
 
     def open_context_menu(self):
-        return build_menu_from_action_list(self.context_menu_actions)
+        return ui_utils.build_menu_from_action_list(self.context_menu_actions)
 
     def auto_populate_parameters(self):
         """Convenience function for generating parameters based on arguments of 'run'"""
@@ -205,12 +206,21 @@ class ToolBoxItemBase(_InternalToolBoxItemBase):
 
 
 class ToolBoxSettings(QtCore.QSettings):
-    def __init__(self):
-        super(ToolBoxSettings, self).__init__(
-            QtCore.QSettings.IniFormat,
-            QtCore.QSettings.UserScope,
-            'dcc_toolbox',
-        )
+    def __init__(self, *args, **kwargs):
+        super(ToolBoxSettings, self).__init__(*args, **kwargs)
+
+    def get_value(self, key, default=None):
+        data_type = None
+        if default is not None:
+            data_type = type(default)
+
+        settings_val = self.value(key, defaultValue=default)
+
+        # safety convert bool to proper type
+        if data_type == bool:
+            settings_val = True if settings_val in ("true", "True", "1", 1, True) else False
+
+        return settings_val
 
 
 def get_func_arguments(func):
@@ -285,3 +295,74 @@ def get_paths_in_folder(root_folder, extension_filter=""):
         for file_name in file_names:
             if file_name.endswith(extension_filter):
                 yield os.path.join(folder, file_name)
+
+
+def browse_for_settings_path(save=False):
+    dialog = QtWidgets.QFileDialog(ui_utils.get_app_window())
+    dialog.setNameFilter("*.ini")
+
+    if save:
+        dialog.setAcceptMode(dialog.AcceptSave)
+    else:
+        dialog.setAcceptMode(dialog.AcceptOpen)
+
+    if dialog.exec_() == QtWidgets.QDialog.Accepted:
+        return dialog.selectedFiles()[0]
+
+
+def save_toolbox_settings(settings, current_toolbox, settings_path=None):
+    """
+    Save settings for current toolbox to standalone file for loading and saving
+
+    :param settings:
+    :param current_toolbox:
+    :param settings_path:
+    :return:
+    """
+    if settings_path is None:
+        settings_path = browse_for_settings_path()
+
+    if not settings_path:
+        return
+
+    out_settings = ToolBoxSettings(settings_path, QtCore.QSettings.IniFormat)
+
+    for setting_key in settings.allKeys():  # type: str
+        if not setting_key.startswith(current_toolbox):
+            continue
+        out_settings.setValue(setting_key, settings.get_value(setting_key))
+
+    out_settings.setValue("toolbox", current_toolbox)
+    return settings_path
+
+
+def load_toolbox_settings(target_settings=None, target_toolbox="", source_settings=None):
+    """
+    Load toolbox settings from standalone file into the target_settings
+
+    :param target_settings:
+    :param target_toolbox:
+    :param source_settings:
+    :return:
+    """
+    if source_settings is None:
+        source_settings = browse_for_settings_path()
+
+    if not source_settings:
+        return
+
+    if not isinstance(source_settings, ToolBoxSettings):
+        source_settings = ToolBoxSettings(source_settings, QtCore.QSettings.IniFormat)
+
+    settings_toolbox = source_settings.get_value("toolbox")
+
+    for setting_key in source_settings.allKeys():  # type: str
+        if not setting_key.startswith(settings_toolbox):
+            continue
+
+        # save data in current toolbox
+        key = setting_key.replace(settings_toolbox, target_toolbox)
+
+        target_settings.setValue(key, source_settings.get_value(setting_key))
+
+    return True

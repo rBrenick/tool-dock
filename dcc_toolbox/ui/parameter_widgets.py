@@ -4,13 +4,15 @@ from .ui_utils import QtWidgets, QtCore, QtGui, get_app_window, delete_window
 class FloatDisplay(QtWidgets.QWidget):
     value_set = QtCore.Signal(float)
 
-    def __init__(self, min=None, max=None, default=0.0, absolute=False, precision=3, *args, **kwargs):
+    def __init__(self, min=None, max=None, default=0.0, absolute=False, precision=3, scroll_trigger=False,
+                 *args, **kwargs):
         super(FloatDisplay, self).__init__(*args, **kwargs)
         self.min_value = min
         self.max_value = max
         self._value = default
         self._display_value = ""
         self._display_precision = precision
+        self._scroll_trigger = scroll_trigger
 
         # absolute is only allowed when min and max is defined
         if min is not None and max is not None:
@@ -72,13 +74,6 @@ class FloatDisplay(QtWidgets.QWidget):
             if ok:
                 self.set_value(val)
 
-    def keyPressEvent(self, event):
-        self.set_multiplier()
-        if event.key() & QtCore.Qt.LeftArrow:
-            self.set_value(self._value - 1.0 * self._multiplier)
-        elif event.key() & QtCore.Qt.RightArrow:
-            self.set_value(self._value + 1.0 * self._multiplier)
-
     def mouseMoveEvent(self, event):
         if event.buttons() == QtCore.Qt.LeftButton:
             self.setCursor(QtCore.Qt.BlankCursor)
@@ -92,6 +87,20 @@ class FloatDisplay(QtWidgets.QWidget):
         self.setCursor(QtCore.Qt.SplitHCursor)
         if event.buttons() == QtCore.Qt.LeftButton:
             QtGui.QCursor.setPos(self._on_click_global_pos)
+
+    def wheelEvent(self, event):
+        if not self._scroll_trigger:
+            return
+        self.set_multiplier()
+        new_value = self._value + ((event.delta() / 120) * self._multiplier)
+        self.set_value(new_value)
+
+    def keyPressEvent(self, event):
+        self.set_multiplier()
+        if event.key() & QtCore.Qt.LeftArrow:
+            self.set_value(self._value - 1.0 * self._multiplier)
+        elif event.key() & QtCore.Qt.RightArrow:
+            self.set_value(self._value + 1.0 * self._multiplier)
 
     def ui_mouse_set_value(self, event):
         if self.absolute:
