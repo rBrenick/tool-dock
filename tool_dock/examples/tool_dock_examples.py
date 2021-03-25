@@ -39,12 +39,21 @@ class ComplexParamExample(dtu.ToolDockItemBase):
         self.choice_param = pg.ChoiceParam(self.param_grid, "Color", choices=["Red", "Green", "Blue"], default="Blue")
         self.bool_param = pg.BoolParam(self.param_grid, "Active", default=True)
 
+        # extra actions can be added to the right click menu like this
+        self.context_menu_actions.extend([
+            "-",
+            {"Extra Right-Click Action": self.example_right_click_action}
+        ])
+
     def run(self):
         # example of getting param values
         print(self.float_param.get_value())
         print(self.str_param.get_value())
         print(self.choice_param.get_value())
         print(self.bool_param.get_value())
+
+    def example_right_click_action(self):
+        print("Extra right click action: {}".format(self.TOOL_NAME))
 
 
 class MultiButtonExample(dtu.ToolDockItemBase):
@@ -65,6 +74,8 @@ class OverrideWidgetExample(dtu.ToolDockItemBase):
     # if you want to be really fancy, you can override the widget creation like this
     def build_ui_widget(self):
         lw = QtWidgets.QListWidget()
+        lw.setMinimumHeight(0)
+        lw.setMinimumWidth(0)
         lw.addItems(["Item1", "Item2", "Item3"])
         return lw
 
