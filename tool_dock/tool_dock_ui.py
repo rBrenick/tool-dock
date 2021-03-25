@@ -64,8 +64,8 @@ class ToolDockWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
         layout_menu.addAction("Lock Layout", self.ui_lock_layout)
         layout_menu.addAction("Unlock Layout", self.ui_unlock_layout)
         layout_menu.addSeparator()
-        layout_menu.addAction("Save Layout", self.save_ui_settings)
-        layout_menu.addAction("Load Layout", self.load_ui_settings)
+        layout_menu.addAction("Save Layout", self.ui_save_settings)
+        layout_menu.addAction("Load Layout", self.ui_load_settings)
         layout_menu.addSeparator()
         layout_menu.addAction("Save Layout File", self.save_settings_to_file)
         layout_menu.addAction("Load Layout File", self.load_settings_from_file)
@@ -79,32 +79,17 @@ class ToolDockWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
         self.k_tool_splitters = "{}/tool_splitters".format(self.active_tooldock)
         self.k_param_grid_ui = "{}/param_grid".format(self.active_tooldock)
 
-        # build dock widgets for all configured tools
-        self.build_tooldock_display()
-
-        self.load_ui_settings()
-
         # a timer can also be used for triggering the load settings
         # for some reason this sometimes works better than any qt refresh option
-        self.load_ui_settings_timer = QtCore.QTimer()
-        self.load_ui_settings_timer.setSingleShot(True)
-        self.load_ui_settings_timer.timeout.connect(self.load_ui_settings)
+        self.ui_load_settings_timer = QtCore.QTimer()
+        self.ui_load_settings_timer.setSingleShot(True)
+        self.ui_load_settings_timer.timeout.connect(self.ui_load_settings)
 
-    def configure_tooldock(self):
-        """Choose which tools should be displayed for this tooldock"""
-        active_tools = self.settings.value(self.k_active_tools, defaultValue=list())
-        win = ToolDockConfigurationDialog(self, active_tools=active_tools)
-        win.config_saved.connect(self.save_user_tooldock)
-        return win.show()
+        # build dock widgets for all configured tools
+        self.ui_build_tool_widgets()
+        self.ui_load_settings()
 
-    def save_user_tooldock(self, tool_names):
-        """Save list of tool_names for this tooldock"""
-        self.save_ui_settings()
-        self.settings.setValue(self.k_active_tools, tool_names)
-        self.build_tooldock_display()
-        self.load_ui_settings_timer.start(1)
-
-    def build_tooldock_display(self):
+    def ui_build_tool_widgets(self):
         # remove any existing tooldock dock widgets
         for dock_widget in self.dock_widgets:  # type: QtWidgets.QDockWidget
             dock_widget.close()
@@ -134,12 +119,13 @@ class ToolDockWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
             self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, dock)
             self.dock_widgets.append(dock)
 
-    def load_ui_settings(self):
+    def ui_load_settings(self):
+        print("loading ui settings: {}".format(self.active_tooldock))
+
         # restore dock widget layouts
         window_geometry = self.settings.value(self.k_win_geometry)
         window_state = self.settings.value(self.k_win_state)
         if window_geometry and window_state:
-            print("loading ui settings: {}".format(self.active_tooldock))
             self.restoreGeometry(window_geometry)
             self.restoreState(window_state)
 
@@ -175,7 +161,7 @@ class ToolDockWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
         if self.settings.get_value(self.k_layout_locked, default=False):
             self.ui_lock_layout()
 
-    def save_ui_settings(self):
+    def ui_save_settings(self):
         # store dock widget layouts
         self.settings.setValue(self.k_win_geometry, self.saveGeometry())
         self.settings.setValue(self.k_win_state, self.saveState())
@@ -199,6 +185,20 @@ class ToolDockWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
         self.settings.setValue(self.k_tool_splitters, tool_splitters)
         self.settings.setValue(self.k_param_grid_ui, parameter_grids)
         print("Saved UI settings {}".format(self.active_tooldock))
+
+    def configure_tooldock(self):
+        """Choose which tools should be displayed for this tooldock"""
+        active_tools = self.settings.value(self.k_active_tools, defaultValue=list())
+        win = ToolDockConfigurationDialog(self, active_tools=active_tools)
+        win.config_saved.connect(self.save_user_tooldock)
+        return win.show()
+
+    def save_user_tooldock(self, tool_names):
+        """Save list of tool_names for this tooldock"""
+        self.ui_save_settings()
+        self.settings.setValue(self.k_active_tools, tool_names)
+        self.ui_build_tool_widgets()
+        self.ui_load_settings_timer.start(1)
 
     def ui_set_window_title(self):
         val, ok = QtWidgets.QInputDialog.getText(self, "New Window Title", "Enter New Title",
@@ -224,7 +224,7 @@ class ToolDockWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
         self.settings.setValue(self.k_layout_locked, False)
 
     def save_settings_to_file(self):
-        self.save_ui_settings()
+        self.ui_save_settings()
         new_path = dtu.save_tooldock_settings(self.settings, current_tooldock=self.active_tooldock)
         if new_path:
             print("Saved Layout to: {}".format(new_path))
@@ -233,9 +233,9 @@ class ToolDockWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
         load_success = dtu.load_tooldock_settings(target_settings=self.settings,
                                                   target_tooldock=self.active_tooldock)
         if load_success:
-            self.build_tooldock_display()
+            self.ui_build_tool_widgets()
             # Wut? for some reason just putting this in a timer works while the other refresh functions don't
-            self.load_ui_settings_timer.start(1)
+            self.ui_load_settings_timer.start(1)
             # ui_utils.process_q_events()
             # self.update()
             # self.repaint()
@@ -245,7 +245,7 @@ class ToolDockWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
 
     # TODO: this event doesn't seem to trigger when using MayaQWidgetDockableMixin
     def closeEvent(self, event):
-        self.save_ui_settings()
+        self.ui_save_settings()
         super(ToolDockWindow, self).closeEvent(event)
 
 
