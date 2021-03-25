@@ -96,7 +96,7 @@ class ToolDockWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
 
         active_tools = self.settings.value(self.k_active_tools, defaultValue=list())
 
-        for tool_item_cls in tdu.get_tool_classes():  # type: dtu.ToolDockItemBase
+        for tool_item_cls in tdu.get_tool_classes():  # type: tdu.ToolDockItemBase
             if tool_item_cls.TOOL_NAME not in active_tools:  # only build for selected window actions
                 continue
 
@@ -106,7 +106,7 @@ class ToolDockWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
             dock_object_name = "{0}_QtObject".format(clean_tool_name)
             dock.setObjectName(dock_object_name)
 
-            tool_widget = tool_item_cls()  # type:dtu.ToolDockItemBase
+            tool_widget = tool_item_cls()  # type:tdu.ToolDockItemBase
             tool_widget.post_init()
             dock.setWidget(tool_widget)
             dock.setToolTip(tool_item_cls.TOOL_TIP)
@@ -128,7 +128,7 @@ class ToolDockWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
         dock_splitters = self.settings.value(self.k_tool_splitters)
         if dock_splitters:
             for dock_widget in self.dock_widgets:
-                tool_item = dock_widget.widget()  # type:dtu.ToolDockItemBase
+                tool_item = dock_widget.widget()  # type:tdu.ToolDockItemBase
                 splitter_data = dock_splitters.get(tool_item.TOOL_NAME)
                 if not splitter_data:
                     continue
@@ -147,7 +147,7 @@ class ToolDockWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
         parameter_grid_ui_settings = self.settings.value(self.k_param_grid_ui)
         if parameter_grid_ui_settings:
             for dock_widget in self.dock_widgets:
-                tool_item = dock_widget.widget()  # type:dtu.ToolDockItemBase
+                tool_item = dock_widget.widget()  # type:tdu.ToolDockItemBase
                 tool_param_grid = parameter_grid_ui_settings.get(tool_item.TOOL_NAME)
                 if not tool_param_grid:
                     continue
@@ -166,7 +166,7 @@ class ToolDockWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
         tool_splitters = {}
         parameter_grids = {}
         for dock_widget in self.dock_widgets:  # type: QtWidgets.QDockWidget
-            tool_item = dock_widget.widget()  # type:dtu.ToolDockItemBase
+            tool_item = dock_widget.widget()  # type:tdu.ToolDockItemBase
 
             # save parameter_grid settings
             parameter_grids[tool_item.TOOL_NAME] = tool_item.param_grid.get_ui_settings()
@@ -295,7 +295,7 @@ class ToolDockConfigurationDialog(QtWidgets.QDialog):
         # last selected script will be previewed
         item = selected_items[-1]
 
-        tool_cls = self.tool_classes.get(item.text())  # type: dtu.ToolDockItemBase
+        tool_cls = self.tool_classes.get(item.text())  # type: tdu.ToolDockItemBase
 
         script_preview_text = tdu.get_preview_from_tool(tool_cls)
 
@@ -306,7 +306,7 @@ class ToolDockConfigurationDialog(QtWidgets.QDialog):
         sorted_tool_names = sorted(self.tool_classes.keys())
 
         for tool_name in sorted_tool_names:
-            tool_cls = self.tool_classes.get(tool_name)  # type: dtu.ToolDockItemBase
+            tool_cls = self.tool_classes.get(tool_name)  # type: tdu.ToolDockItemBase
             lwi = QtWidgets.QListWidgetItem(self.tools_LW)
             lwi.setText(tool_name)
             lwi.setToolTip(tool_cls.TOOL_TIP)
