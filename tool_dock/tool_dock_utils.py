@@ -237,13 +237,11 @@ def import_extra_modules(refresh=False):
                 # pop up out all submodule of imported module
                 if module_import_str in mod_key:
                     sys.modules.pop(mod_key)
-                    print "popping", mod_key
                     continue
 
     # import modules defined in environment variable
     for module_import_str in modules_to_import:
         if module_import_str:  # if not an empty string
-            print "importing", module_import_str
             importlib.import_module(module_import_str)
 
 
@@ -279,7 +277,7 @@ def get_tool_classes():
     return subclasses
 
 
-def get_preview_from_script(script_path, max_line_count=None):
+def get_preview_from_script_path(script_path, max_line_count=None):
     """
     Open file and read a couple of lines
     :param script_path: script file path
@@ -300,6 +298,20 @@ def get_preview_from_script(script_path, max_line_count=None):
 
     preview_str = "{}\n\n{}\n".format(script_path, script_code)
     return preview_str
+
+
+def get_preview_from_script_cls(tool_cls):
+    preview_str = "{}\n\n{}".format(tool_cls.__module__, inspect.getsource(tool_cls.run))
+    return preview_str
+
+
+def get_preview_from_tool(tool_cls):
+    if tool_cls.SCRIPT_PATH:
+        script_preview_text = get_preview_from_script_path(tool_cls.SCRIPT_PATH)
+    else:
+        script_preview_text = get_preview_from_script_cls(tool_cls)
+
+    return script_preview_text
 
 
 def make_class_from_script(script_path, tool_name):

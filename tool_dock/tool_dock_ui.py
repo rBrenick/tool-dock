@@ -297,10 +297,7 @@ class ToolDockConfigurationDialog(QtWidgets.QDialog):
 
         tool_cls = self.tool_classes.get(item.text())  # type: dtu.ToolDockItemBase
 
-        if tool_cls.SCRIPT_PATH:
-            script_preview_text = tdu.get_preview_from_script(tool_cls.SCRIPT_PATH)
-        else:
-            script_preview_text = "Defined in: {}".format(tool_cls.__module__)
+        script_preview_text = tdu.get_preview_from_tool(tool_cls)
 
         self.script_preview_TE.setText(script_preview_text)
 
