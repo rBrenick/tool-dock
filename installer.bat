@@ -2,7 +2,7 @@
 :BEGIN
 CLS
 
-ECHO Welcome to dcc_toolbox
+ECHO Welcome to tool_dock
 ECHO Here are the options
 ECHO.
 
@@ -12,7 +12,7 @@ ECHO    2 = Uninstall
 ECHO    3 = Get Latest version of tool
 ECHO.
 ECHO Advanced:
-ECHO    4 = Make New Tool from dcc_toolbox
+ECHO    4 = Make New Tool from tool_dock
 
 ECHO.
 SET /P AREYOUSURE=Choice: 

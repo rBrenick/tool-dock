@@ -1,4 +1,4 @@
-# dcc-toolbox
+# tool-dock
 Customizable UI for quick DCC tool palettes
 
 ![tool header image](docs/showcase.gif)
@@ -8,8 +8,8 @@ Customizable UI for quick DCC tool palettes
 # How it works
 Via the *Configure* button you can specify tools that should be visible in the UI.
 
-Any subclass of ToolBoxItemBase can be added as QDockWidgets to the main UI.
-In *dcc_toolbox_examples.py* you'll find some samples of how to define tool classes.
+Any subclass of ToolDockItemBase can be added as QDockWidgets to the main UI.
+In *tool_dock_examples.py* you'll find some samples of how to define tool classes.
 
 Classes with a *run* function defined will be executed on button press.
 
@@ -18,9 +18,9 @@ Classes with a *get_tool_actions* function defined will be added as individual b
 
 # Extra Environment Variables
 
-*DCC_TOOLBOX_SCRIPT_FOLDERS* defines root folders for extra scripts that will be added as tools.
+*tool_dock_SCRIPT_FOLDERS* defines root folders for extra scripts that will be added as tools.
 
-*DCC_TOOLBOX_EXTRA_MODULES* defines extra modules to be imported on tool startup. Tools can be defined in these modules, which will then be available in the configurations.  
+*tool_dock_EXTRA_MODULES* defines extra modules to be imported on tool startup. Tools can be defined in these modules, which will then be available in the configurations.  
 
 
 # Install
@@ -37,8 +37,8 @@ Classes with a *get_tool_actions* function defined will be added as individual b
 
 <pre>
 
-import dcc_toolbox
-dcc_toolbox.main()
+import tool_dock
+tool_dock.main()
 
 </pre>
 

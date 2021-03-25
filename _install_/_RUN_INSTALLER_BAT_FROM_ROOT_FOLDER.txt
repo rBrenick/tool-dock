@@ -2,12 +2,12 @@
 Cheeky lil command if you don't want to restart maya the first time
 
 import sys
-tool_path = r"D:\Git\dcc_toolbox\src\scripts"
+tool_path = r"D:\Git\tool_dock\src\scripts"
 if tool_path not in sys.path:
     sys.path.append(tool_path)
 
-from dcc_toolbox import dcc_toolbox_UI
-dcc_toolbox_UI.main()
+from tool_dock import tool_dock_UI
+tool_dock_UI.main()
 
 
 

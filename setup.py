@@ -4,14 +4,14 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="dcc-toolbox",
+    name="tool-dock",
     version="1.0.0",
     author="Richard Brenick",
     author_email="RichardBrenick@gmail.com",
-    description="maya tool template",
+    description="docking system for DCC tools",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/rBrenick/dcc-toolbox",
+    url="https://github.com/rBrenick/tool-dock",
     packages=setuptools.find_packages(),
     package_data={'': ['*.*']},
     classifiers=[

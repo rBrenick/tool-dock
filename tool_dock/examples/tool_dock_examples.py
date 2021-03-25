@@ -1,15 +1,15 @@
 import os
 import sys
 
-from dcc_toolbox import dcc_toolbox_utils as dtu
-from dcc_toolbox.ui import parameter_grid as pg
-from dcc_toolbox.ui.ui_utils import QtWidgets
+from tool_dock import tool_dock_utils as dtu
+from tool_dock.ui import parameter_grid as pg
+from tool_dock.ui.ui_utils import QtWidgets
 
 
 #####################################################
 # Example tools
 
-class BasicAction(dtu.ToolBoxItemBase):
+class BasicAction(dtu.ToolDockItemBase):
     TOOL_NAME = "Basic Action"
     BACKGROUND_COLOR = (80, 120, 80)
 
@@ -17,7 +17,7 @@ class BasicAction(dtu.ToolBoxItemBase):
         print("triggered BasicAction")
 
 
-class BasicParamExample(dtu.ToolBoxItemBase):
+class BasicParamExample(dtu.ToolDockItemBase):
     TOOL_NAME = "Basic Params"
 
     # function arguments can be extrapolated and automatically added as parameters
@@ -25,7 +25,7 @@ class BasicParamExample(dtu.ToolBoxItemBase):
         print(arg_1, arg_2)
 
 
-class ComplexParamExample(dtu.ToolBoxItemBase):
+class ComplexParamExample(dtu.ToolDockItemBase):
     TOOL_NAME = "Complex Params"
     BACKGROUND_COLOR = (50, 100, 160)
 
@@ -47,7 +47,7 @@ class ComplexParamExample(dtu.ToolBoxItemBase):
         print(self.bool_param.get_value())
 
 
-class MultiButtonExample(dtu.ToolBoxItemBase):
+class MultiButtonExample(dtu.ToolDockItemBase):
     TOOL_NAME = "Multi Buttons"
     BACKGROUND_COLOR = (160, 80, 20)
 
@@ -59,7 +59,7 @@ class MultiButtonExample(dtu.ToolBoxItemBase):
         }
 
 
-class OverrideWidgetExample(dtu.ToolBoxItemBase):
+class OverrideWidgetExample(dtu.ToolDockItemBase):
     TOOL_NAME = "Custom Widget"
 
     # if you want to be really fancy, you can override the widget creation like this

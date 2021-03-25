@@ -1,7 +1,7 @@
 # content
 def main(*args, **kwargs):
-    from dcc_toolbox import dcc_toolbox_ui
-    return dcc_toolbox_ui.main(*args, **kwargs)
+    from tool_dock import tool_dock_ui
+    return tool_dock_ui.main(*args, **kwargs)
 
 
 def reload_module(full_refresh=False):
@@ -12,16 +12,16 @@ def reload_module(full_refresh=False):
         from imp import reload
 
     from .ui import ui_utils
-    from . import dcc_toolbox_utils
-    from dcc_toolbox.examples import dcc_toolbox_examples
-    from . import dcc_toolbox_ui
+    from . import tool_dock_utils
+    from tool_dock.examples import tool_dock_examples
+    from . import tool_dock_ui
 
     # custom wonky reload things here
-    for window_index, toolbox_window in ui_utils.wh.windows.items():
+    for window_index, tooldock_window in ui_utils.wh.windows.items():
         to_remove = False
         try:
-            if not toolbox_window.isVisible():
-                toolbox_window.deleteLater()
+            if not tooldock_window.isVisible():
+                tooldock_window.deleteLater()
                 to_remove = True
         except Exception as e:
             to_remove = True
@@ -32,6 +32,6 @@ def reload_module(full_refresh=False):
     if full_refresh:  # under conditional argument because WindowHandler class is defined here
         reload(ui_utils)
 
-    reload(dcc_toolbox_utils)
-    reload(dcc_toolbox_examples)
-    reload(dcc_toolbox_ui)
+    reload(tool_dock_utils)
+    reload(tool_dock_examples)
+    reload(tool_dock_ui)

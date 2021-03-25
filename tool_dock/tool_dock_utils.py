@@ -5,9 +5,9 @@ import runpy
 import sys
 from functools import partial
 
-from dcc_toolbox.ui import parameter_grid
-from dcc_toolbox.ui import ui_utils
-from dcc_toolbox.ui.ui_utils import QtCore, QtWidgets
+from tool_dock.ui import parameter_grid
+from tool_dock.ui import ui_utils
+from tool_dock.ui.ui_utils import QtCore, QtWidgets
 
 PY_2 = sys.version_info[0] < 3
 background_form = "background-color:rgb({0}, {1}, {2})"
@@ -23,8 +23,8 @@ class LocalConstants(object):
     dynamic_classes_generated = False
     dynamic_classes = {}
 
-    env_extra_modules = "DCC_TOOLBOX_EXTRA_MODULES"
-    env_script_folders = "DCC_TOOLBOX_SCRIPT_FOLDERS"
+    env_extra_modules = "tool_dock_EXTRA_MODULES"
+    env_script_folders = "tool_dock_SCRIPT_FOLDERS"
 
     # a base scripts folder can be defined via this environment variable
     # script files in this folder structure will be added as dynamic classes
@@ -69,7 +69,7 @@ class LocalConstants(object):
 lk = LocalConstants()
 
 
-class _InternalToolBoxItemBase(QtWidgets.QWidget):
+class _InternalToolDockItemBase(QtWidgets.QWidget):
     """
     Internal Base Class for tools logic
     """
@@ -80,7 +80,7 @@ class _InternalToolBoxItemBase(QtWidgets.QWidget):
     SCRIPT_PATH = None  # used by dynamically generated classes
 
     def __init__(self, *args, **kwargs):
-        super(_InternalToolBoxItemBase, self).__init__(*args, **kwargs)
+        super(_InternalToolDockItemBase, self).__init__(*args, **kwargs)
 
         self.main_layout = QtWidgets.QHBoxLayout()
         self.main_layout.setContentsMargins(0, 0, 0, 0)
@@ -198,16 +198,16 @@ class _InternalToolBoxItemBase(QtWidgets.QWidget):
         return {}
 
 
-class ToolBoxItemBase(_InternalToolBoxItemBase):
+class ToolDockItemBase(_InternalToolDockItemBase):
     """
     Base Class for tools to inherit from
     """
     pass
 
 
-class ToolBoxSettings(QtCore.QSettings):
+class ToolDockSettings(QtCore.QSettings):
     def __init__(self, *args, **kwargs):
-        super(ToolBoxSettings, self).__init__(*args, **kwargs)
+        super(ToolDockSettings, self).__init__(*args, **kwargs)
 
     def get_value(self, key, default=None):
         data_type = None
@@ -245,12 +245,12 @@ def all_subclasses(cls):
     return set(cls.__subclasses__()).union([s for c in cls.__subclasses__() for s in all_subclasses(c)])
 
 
-def get_toolbox_item_classes():
+def get_tooldock_item_classes():
     if not lk.dynamic_classes_generated:
         lk.generate_dynamic_classes()
 
     # get all base sub classes
-    subclasses = list(all_subclasses(ToolBoxItemBase))
+    subclasses = list(all_subclasses(ToolDockItemBase))
     subclasses.extend(lk.dynamic_classes.values())
     return subclasses
 
@@ -279,7 +279,7 @@ def get_preview_from_script(script_path, max_line_count=None):
 
 
 def make_class_from_script(script_path, tool_name):
-    class DynamicClass(_InternalToolBoxItemBase):
+    class DynamicClass(_InternalToolDockItemBase):
         TOOL_NAME = tool_name
         TOOL_TIP = script_path
         SCRIPT_PATH = script_path
@@ -310,12 +310,12 @@ def browse_for_settings_path(save=False):
         return dialog.selectedFiles()[0]
 
 
-def save_toolbox_settings(settings, current_toolbox, settings_path=None):
+def save_tooldock_settings(settings, current_tooldock, settings_path=None):
     """
-    Save settings for current toolbox to standalone file for loading and saving
+    Save settings for current tooldock to standalone file for loading and saving
 
     :param settings:
-    :param current_toolbox:
+    :param current_tooldock:
     :param settings_path:
     :return:
     """
@@ -325,23 +325,23 @@ def save_toolbox_settings(settings, current_toolbox, settings_path=None):
     if not settings_path:
         return
 
-    out_settings = ToolBoxSettings(settings_path, QtCore.QSettings.IniFormat)
+    out_settings = ToolDockSettings(settings_path, QtCore.QSettings.IniFormat)
 
     for setting_key in settings.allKeys():  # type: str
-        if not setting_key.startswith(current_toolbox):
+        if not setting_key.startswith(current_tooldock):
             continue
         out_settings.setValue(setting_key, settings.get_value(setting_key))
 
-    out_settings.setValue("toolbox", current_toolbox)
+    out_settings.setValue("tooldock", current_tooldock)
     return settings_path
 
 
-def load_toolbox_settings(target_settings=None, target_toolbox="", source_settings=None):
+def load_tooldock_settings(target_settings=None, target_tooldock="", source_settings=None):
     """
-    Load toolbox settings from standalone file into the target_settings
+    Load tooldock settings from standalone file into the target_settings
 
     :param target_settings:
-    :param target_toolbox:
+    :param target_tooldock:
     :param source_settings:
     :return:
     """
@@ -351,17 +351,17 @@ def load_toolbox_settings(target_settings=None, target_toolbox="", source_settin
     if not source_settings:
         return
 
-    if not isinstance(source_settings, ToolBoxSettings):
-        source_settings = ToolBoxSettings(source_settings, QtCore.QSettings.IniFormat)
+    if not isinstance(source_settings, ToolDockSettings):
+        source_settings = ToolDockSettings(source_settings, QtCore.QSettings.IniFormat)
 
-    settings_toolbox = source_settings.get_value("toolbox")
+    settings_tooldock = source_settings.get_value("tooldock")
 
     for setting_key in source_settings.allKeys():  # type: str
-        if not setting_key.startswith(settings_toolbox):
+        if not setting_key.startswith(settings_tooldock):
             continue
 
-        # save data in current toolbox
-        key = setting_key.replace(settings_toolbox, target_toolbox)
+        # save data in current tooldock
+        key = setting_key.replace(settings_tooldock, target_tooldock)
 
         target_settings.setValue(key, source_settings.get_value(setting_key))
 

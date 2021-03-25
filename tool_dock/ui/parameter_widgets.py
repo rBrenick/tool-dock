@@ -212,9 +212,9 @@ def main():
 
 
 """
-import dcc_toolbox.ui.parameter_widgets
-reload(dcc_toolbox.ui.parameter_widgets)
-win = dcc_toolbox.ui.parameter_widgets.main()
+import tool_dock.ui.parameter_widgets
+reload(tool_dock.ui.parameter_widgets)
+win = tool_dock.ui.parameter_widgets.main()
 
 """
 

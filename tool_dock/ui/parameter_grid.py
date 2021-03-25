@@ -226,9 +226,9 @@ def main():
 
 """
 
-import dcc_toolbox.ui.parameter_grid
-reload(dcc_toolbox.ui.parameter_grid)
-win = dcc_toolbox.ui.parameter_grid.main()
+import tool_dock.ui.parameter_grid
+reload(tool_dock.ui.parameter_grid)
+win = tool_dock.ui.parameter_grid.main()
 
 """
 

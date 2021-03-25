@@ -30,14 +30,14 @@ function SafeRemove
 # Lotsa variables
 $USER_DOWNLOADS_FOLDER = "$env:userprofile\Downloads"
 
-$TOOL_GIT_REPO = "https://github.com/rBrenick/dcc-toolbox/archive/master.zip" # modify these after uploading the tool
-$UPDATE_PATHS = @("docs", "dcc_toolbox", "README.md", "setup.py")
+$TOOL_GIT_REPO = "https://github.com/rBrenick/tool-dock/archive/main.zip" # modify these after uploading the tool
+$UPDATE_PATHS = @("docs", "tool_dock", "README.md", "setup.py")
 
 $CURRENT_TOOL_FOLDER = (Get-Item -Path ".").FullName
-$CURRENT_dcc_toolbox = (Get-Item -Path ".").Name
+$CURRENT_tool_dock = (Get-Item -Path ".").Name
 
-$NEW_VERSION_ZIP = $USER_DOWNLOADS_FOLDER + "\" + $CURRENT_dcc_toolbox + "_update.zip"
-$NEW_VERSION_ZIP_FOLDER = $USER_DOWNLOADS_FOLDER + "\" + $CURRENT_dcc_toolbox + "_update"
+$NEW_VERSION_ZIP = $USER_DOWNLOADS_FOLDER + "\" + $CURRENT_tool_dock + "_update.zip"
+$NEW_VERSION_ZIP_FOLDER = $USER_DOWNLOADS_FOLDER + "\" + $CURRENT_tool_dock + "_update"
 
 SafeRemove $NEW_VERSION_ZIP
 SafeRemove $NEW_VERSION_ZIP_FOLDER
@@ -78,7 +78,7 @@ foreach ($element in $UPDATE_PATHS) {
 # Copy new directories
 foreach ($element in $UPDATE_PATHS) {
     # Since it's the latest version it will have -master suffix in the folder name
-    $src_file_path = "$NEW_VERSION_ZIP_FOLDER\$CURRENT_dcc_toolbox-master\$element"
+    $src_file_path = "$NEW_VERSION_ZIP_FOLDER\$CURRENT_tool_dock-master\$element"
     $tgt_file_path = "$CURRENT_TOOL_FOLDER\$element"
     
     echo "Copying new $tgt_file_path"

@@ -9,14 +9,14 @@ import importlib
 import os
 import sys
 
-from dcc_toolbox import dcc_toolbox_utils as dtu
+from tool_dock import tool_dock_utils as dtu
 # UI
-from dcc_toolbox.ui import ui_utils
-from dcc_toolbox.ui.ui_utils import QtCore, QtWidgets, QtGui
+from tool_dock.ui import ui_utils
+from tool_dock.ui.ui_utils import QtCore, QtWidgets, QtGui
 
 try:
     # subclasses defined in here will be read on window initialization
-    from dcc_toolbox.examples import dcc_toolbox_examples
+    from tool_dock.examples import tool_dock_examples
 
     # Extra module paths can be defined via this environment variable
     # These paths will then be imported on startup
@@ -26,23 +26,23 @@ try:
             importlib.import_module(module_import_str)
 
     # Example of how to set the variable (this would have to happen before the DCC starts up, or early in it)
-    # os.environ["DCC_TOOLBOX_EXTRA_MODULES"] = "a_module;another_module"
+    # os.environ["tool_dock_EXTRA_MODULES"] = "a_module;another_module"
 
 except Exception as e:
     print(e)
 
 
-class ToolBoxWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
-    docking_object_name = "ToolBox"
+class ToolDockWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
+    docking_object_name = "ToolDock"
 
     def __init__(self, window_index=0, *args, **kwargs):
-        super(ToolBoxWindow, self).__init__(*args, **kwargs)
+        super(ToolDockWindow, self).__init__(*args, **kwargs)
         self.window_index = window_index
-        self.setWindowTitle("ToolBoxWindow_{}".format(self.window_index))
+        self.setWindowTitle("ToolDockWindow_{}".format(self.window_index))
 
         self.dock_widgets = []
         self.title_bar_widgets = {}
-        self.settings = dtu.ToolBoxSettings(QtCore.QSettings.IniFormat, QtCore.QSettings.UserScope, 'dcc_toolbox')
+        self.settings = dtu.ToolDockSettings(QtCore.QSettings.IniFormat, QtCore.QSettings.UserScope, 'tool_dock')
 
         # add a static widget to dock other widgets around
         self.central_widget = QtWidgets.QWidget()
@@ -58,7 +58,7 @@ class ToolBoxWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
 
         # create docks for each subclassed tool widget
         menu_bar = self.menuBar()  # type: QtWidgets.QMenuBar
-        menu_bar.addAction("Configure", self.configure_toolbox)
+        menu_bar.addAction("Configure", self.configure_tooldock)
         layout_menu = menu_bar.addMenu("Layout")  # type: QtWidgets.QMenu
         layout_menu.addAction("Set Window Name", self.ui_set_window_title)
         layout_menu.addAction("Lock Layout", self.ui_lock_layout)
@@ -71,16 +71,16 @@ class ToolBoxWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
         layout_menu.addAction("Load Layout File", self.load_settings_from_file)
 
         # setting strings
-        self.active_toolbox = "toolbox_{}".format(self.window_index)
-        self.k_active_tools = "{}/tools".format(self.active_toolbox)
-        self.k_win_geometry = "{}/window_geometry".format(self.active_toolbox)
-        self.k_win_state = "{}/window_state".format(self.active_toolbox)
-        self.k_layout_locked = "{}/layout_locked".format(self.active_toolbox)
-        self.k_tool_splitters = "{}/tool_splitters".format(self.active_toolbox)
-        self.k_param_grid_ui = "{}/param_grid".format(self.active_toolbox)
+        self.active_tooldock = "tooldock_{}".format(self.window_index)
+        self.k_active_tools = "{}/tools".format(self.active_tooldock)
+        self.k_win_geometry = "{}/window_geometry".format(self.active_tooldock)
+        self.k_win_state = "{}/window_state".format(self.active_tooldock)
+        self.k_layout_locked = "{}/layout_locked".format(self.active_tooldock)
+        self.k_tool_splitters = "{}/tool_splitters".format(self.active_tooldock)
+        self.k_param_grid_ui = "{}/param_grid".format(self.active_tooldock)
 
         # build dock widgets for all configured tools
-        self.build_toolbox_display()
+        self.build_tooldock_display()
 
         self.load_ui_settings()
 
@@ -90,22 +90,22 @@ class ToolBoxWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
         self.load_ui_settings_timer.setSingleShot(True)
         self.load_ui_settings_timer.timeout.connect(self.load_ui_settings)
 
-    def configure_toolbox(self):
-        """Choose which tools should be displayed for this toolbox"""
+    def configure_tooldock(self):
+        """Choose which tools should be displayed for this tooldock"""
         active_tools = self.settings.value(self.k_active_tools, defaultValue=list())
-        win = ToolBoxConfigurationDialog(self, active_tools=active_tools)
-        win.config_saved.connect(self.save_user_toolbox)
+        win = ToolDockConfigurationDialog(self, active_tools=active_tools)
+        win.config_saved.connect(self.save_user_tooldock)
         return win.show()
 
-    def save_user_toolbox(self, tool_names):
-        """Save list of tool_names for this toolbox"""
+    def save_user_tooldock(self, tool_names):
+        """Save list of tool_names for this tooldock"""
         self.save_ui_settings()
         self.settings.setValue(self.k_active_tools, tool_names)
-        self.build_toolbox_display()
-        self.load_ui_settings()
+        self.build_tooldock_display()
+        self.load_ui_settings_timer.start(1)
 
-    def build_toolbox_display(self):
-        # remove any existing toolbox dock widgets
+    def build_tooldock_display(self):
+        # remove any existing tooldock dock widgets
         for dock_widget in self.dock_widgets:  # type: QtWidgets.QDockWidget
             dock_widget.close()
             dock_widget.deleteLater()
@@ -116,20 +116,20 @@ class ToolBoxWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
 
         active_tools = self.settings.value(self.k_active_tools, defaultValue=list())
 
-        for toolbox_item_cls in dtu.get_toolbox_item_classes():  # type: dtu.ToolBoxItemBase
-            if toolbox_item_cls.TOOL_NAME not in active_tools:  # only build for selected window actions
+        for tooldock_item_cls in dtu.get_tooldock_item_classes():  # type: dtu.ToolDockItemBase
+            if tooldock_item_cls.TOOL_NAME not in active_tools:  # only build for selected window actions
                 continue
 
-            dock = QtWidgets.QDockWidget(toolbox_item_cls.TOOL_NAME, self)
+            dock = QtWidgets.QDockWidget(tooldock_item_cls.TOOL_NAME, self)
 
-            clean_tool_name = toolbox_item_cls.__name__.replace(" ", "_")
+            clean_tool_name = tooldock_item_cls.__name__.replace(" ", "_")
             dock_object_name = "{0}_QtObject".format(clean_tool_name)
             dock.setObjectName(dock_object_name)
 
-            tool_widget = toolbox_item_cls()  # type:dtu.ToolBoxItemBase
+            tool_widget = tooldock_item_cls()  # type:dtu.ToolDockItemBase
             tool_widget.post_init()
             dock.setWidget(tool_widget)
-            dock.setToolTip(toolbox_item_cls.TOOL_TIP)
+            dock.setToolTip(tooldock_item_cls.TOOL_TIP)
 
             self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, dock)
             self.dock_widgets.append(dock)
@@ -139,7 +139,7 @@ class ToolBoxWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
         window_geometry = self.settings.value(self.k_win_geometry)
         window_state = self.settings.value(self.k_win_state)
         if window_geometry and window_state:
-            print("loading ui settings: {}".format(self.active_toolbox))
+            print("loading ui settings: {}".format(self.active_tooldock))
             self.restoreGeometry(window_geometry)
             self.restoreState(window_state)
 
@@ -147,7 +147,7 @@ class ToolBoxWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
         dock_splitters = self.settings.value(self.k_tool_splitters)
         if dock_splitters:
             for dock_widget in self.dock_widgets:
-                tool_item = dock_widget.widget()  # type:dtu.ToolBoxItemBase
+                tool_item = dock_widget.widget()  # type:dtu.ToolDockItemBase
                 splitter_data = dock_splitters.get(tool_item.TOOL_NAME)
                 if not splitter_data:
                     continue
@@ -166,7 +166,7 @@ class ToolBoxWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
         parameter_grid_ui_settings = self.settings.value(self.k_param_grid_ui)
         if parameter_grid_ui_settings:
             for dock_widget in self.dock_widgets:
-                tool_item = dock_widget.widget()  # type:dtu.ToolBoxItemBase
+                tool_item = dock_widget.widget()  # type:dtu.ToolDockItemBase
                 tool_param_grid = parameter_grid_ui_settings.get(tool_item.TOOL_NAME)
                 if not tool_param_grid:
                     continue
@@ -185,7 +185,7 @@ class ToolBoxWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
         tool_splitters = {}
         parameter_grids = {}
         for dock_widget in self.dock_widgets:  # type: QtWidgets.QDockWidget
-            tool_item = dock_widget.widget()  # type:dtu.ToolBoxItemBase
+            tool_item = dock_widget.widget()  # type:dtu.ToolDockItemBase
 
             # save parameter_grid settings
             parameter_grids[tool_item.TOOL_NAME] = tool_item.param_grid.get_ui_settings()
@@ -198,7 +198,7 @@ class ToolBoxWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
 
         self.settings.setValue(self.k_tool_splitters, tool_splitters)
         self.settings.setValue(self.k_param_grid_ui, parameter_grids)
-        print("Saved UI settings {}".format(self.active_toolbox))
+        print("Saved UI settings {}".format(self.active_tooldock))
 
     def ui_set_window_title(self):
         val, ok = QtWidgets.QInputDialog.getText(self, "New Window Title", "Enter New Title",
@@ -225,15 +225,15 @@ class ToolBoxWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
 
     def save_settings_to_file(self):
         self.save_ui_settings()
-        new_path = dtu.save_toolbox_settings(self.settings, current_toolbox=self.active_toolbox)
+        new_path = dtu.save_tooldock_settings(self.settings, current_tooldock=self.active_tooldock)
         if new_path:
             print("Saved Layout to: {}".format(new_path))
 
     def load_settings_from_file(self):
-        load_success = dtu.load_toolbox_settings(target_settings=self.settings,
-                                                 target_toolbox=self.active_toolbox)
+        load_success = dtu.load_tooldock_settings(target_settings=self.settings,
+                                                 target_tooldock=self.active_tooldock)
         if load_success:
-            self.build_toolbox_display()
+            self.build_tooldock_display()
             # Wut? for some reason just putting this in a timer works while the other refresh functions don't
             self.load_ui_settings_timer.start(1)
             # ui_utils.process_q_events()
@@ -246,20 +246,20 @@ class ToolBoxWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
     # TODO: this event doesn't seem to trigger when using MayaQWidgetDockableMixin
     def closeEvent(self, event):
         self.save_ui_settings()
-        super(ToolBoxWindow, self).closeEvent(event)
+        super(ToolDockWindow, self).closeEvent(event)
 
 
-class ToolBoxConfigurationDialog(QtWidgets.QDialog):
+class ToolDockConfigurationDialog(QtWidgets.QDialog):
     """
-    Define which actions should be visible in the ToolBox
+    Define which actions should be visible in the ToolDock
     """
     config_saved = QtCore.Signal(list)
 
     def __init__(self, parent=ui_utils.get_app_window(), active_tools=None, *args, **kwargs):
-        super(ToolBoxConfigurationDialog, self).__init__(parent=parent, *args, **kwargs)
-        self.setWindowTitle("Toolbox Configuration")
+        super(ToolDockConfigurationDialog, self).__init__(parent=parent, *args, **kwargs)
+        self.setWindowTitle("ToolDock Configuration")
 
-        self.tool_classes = {cls.TOOL_NAME: cls for cls in dtu.get_toolbox_item_classes()}
+        self.tool_classes = {cls.TOOL_NAME: cls for cls in dtu.get_tooldock_item_classes()}
 
         main_layout = QtWidgets.QVBoxLayout()
         self.setLayout(main_layout)
@@ -300,7 +300,7 @@ class ToolBoxConfigurationDialog(QtWidgets.QDialog):
         # last selected script will be previewed
         item = selected_items[-1]
 
-        tool_cls = self.tool_classes.get(item.text())  # type: dtu.ToolBoxItemBase
+        tool_cls = self.tool_classes.get(item.text())  # type: dtu.ToolDockItemBase
 
         if tool_cls.SCRIPT_PATH:
             script_preview_text = dtu.get_preview_from_script(tool_cls.SCRIPT_PATH)
@@ -314,7 +314,7 @@ class ToolBoxConfigurationDialog(QtWidgets.QDialog):
         sorted_tool_names = sorted(self.tool_classes.keys())
 
         for tool_name in sorted_tool_names:
-            tool_cls = self.tool_classes.get(tool_name)  # type: dtu.ToolBoxItemBase
+            tool_cls = self.tool_classes.get(tool_name)  # type: dtu.ToolDockItemBase
             lwi = QtWidgets.QListWidgetItem(self.tools_LW)
             lwi.setText(tool_name)
             lwi.setToolTip(tool_cls.TOOL_TIP)
@@ -336,9 +336,9 @@ class ToolBoxConfigurationDialog(QtWidgets.QDialog):
 
 
 def main(restore=False, force_refresh=False, index=None):
-    restore_script = "import dcc_toolbox; dcc_toolbox.main(restore=True, index={})"
+    restore_script = "import tool_dock; tool_dock.main(restore=True, index={})"
 
-    return ui_utils.create_dockable_widget(ToolBoxWindow,
+    return ui_utils.create_dockable_widget(ToolDockWindow,
                                            restore=restore,
                                            restore_script=restore_script,
                                            force_refresh=force_refresh,

@@ -5,8 +5,8 @@
 # searches through files and replaces in there as well
 
 $TOOL_PACKAGES_FOLDER = (Get-Item -Path "..\").FullName
-$CURRENT_TOOLNAME = "dcc_toolbox"
-$CURRENT_TOOLNAME_RAW = "dcc-toolbox"
+$CURRENT_TOOLNAME = "tool_dock"
+$CURRENT_TOOLNAME_RAW = "tool-dock"
 $CURRENT_TOOL_FOLDER = (Get-Item -Path ".").FullName
 $NEW_TOOLNAME_RAW = Read-Host -Prompt 'New Tool Name'
 $NEW_TOOLNAME_CLEAN = $NEW_TOOLNAME_RAW.replace("-","_")
@@ -42,7 +42,7 @@ Foreach-Object {
     
 }
 
-# Find instances of dcc_toolbox in files and replace them with the new tool name
+# Find instances of tool_dock in files and replace them with the new tool name
 Get-ChildItem $NEW_TOOL_FOLDER -recurse -File | 
 Foreach-Object {
     
@@ -50,7 +50,7 @@ Foreach-Object {
     
     ((Get-Content -path $_.FullName -Raw) -replace $CURRENT_TOOLNAME_RAW, $NEW_TOOLNAME_RAW) | Set-Content -Path $_.FullName
     ((Get-Content -path $_.FullName -Raw) -replace $CURRENT_TOOLNAME, $NEW_TOOLNAME_CLEAN) | Set-Content -Path $_.FullName
-    ((Get-Content -path $_.FullName -Raw) -replace "dcc_toolbox", $NEW_TOOLNAME_CLEAN) | Set-Content -Path $_.FullName
+    ((Get-Content -path $_.FullName -Raw) -replace "tool_dock", $NEW_TOOLNAME_CLEAN) | Set-Content -Path $_.FullName
     
 }
 
