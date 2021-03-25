@@ -12,8 +12,8 @@ def reload_module(full_refresh=False):
         from imp import reload
 
     from .ui import ui_utils
+    from .examples import tool_dock_examples
     from . import tool_dock_utils
-    from tool_dock.examples import tool_dock_examples
     from . import tool_dock_ui
 
     # custom wonky reload things here
@@ -34,4 +34,6 @@ def reload_module(full_refresh=False):
 
     reload(tool_dock_utils)
     reload(tool_dock_examples)
+    tool_dock_utils.import_extra_modules(refresh=True)
     reload(tool_dock_ui)
+

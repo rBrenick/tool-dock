@@ -1,4 +1,5 @@
 import collections
+import importlib
 import inspect
 import os
 import runpy
@@ -28,7 +29,7 @@ class LocalConstants(object):
 
     # a base scripts folder can be defined via this environment variable
     # script files in this folder structure will be added as dynamic classes
-    script_folders = os.environ.get(env_script_folders, "D:/Google Drive/Scripting/_Scripts")
+    script_folders = os.environ.get(env_script_folders, "D:/Google Drive/Scripting/_Scrsipts")
 
     def generate_dynamic_classes(self):
         if not self.script_folders:
@@ -221,6 +222,29 @@ class ToolDockSettings(QtCore.QSettings):
             settings_val = True if settings_val in ("true", "True", "1", 1, True) else False
 
         return settings_val
+
+
+def import_extra_modules(refresh=False):
+    modules_to_import = os.environ.get(lk.env_extra_modules, "").split(";")
+
+    if refresh:
+        for mod_key in sys.modules.keys():
+            for module_import_str in modules_to_import:
+
+                if not module_import_str:  # skip empty strings
+                    continue
+
+                # pop up out all submodule of imported module
+                if module_import_str in mod_key:
+                    sys.modules.pop(mod_key)
+                    print "popping", mod_key
+                    continue
+
+    # import modules defined in environment variable
+    for module_import_str in modules_to_import:
+        if module_import_str:  # if not an empty string
+            print "importing", module_import_str
+            importlib.import_module(module_import_str)
 
 
 def get_func_arguments(func):

@@ -1,7 +1,7 @@
 import os
 import sys
 
-from tool_dock import tool_dock_utils as dtu
+from tool_dock import tool_dock_utils as tdu
 from tool_dock.ui import parameter_grid as pg
 from tool_dock.ui.ui_utils import QtWidgets
 
@@ -9,7 +9,7 @@ from tool_dock.ui.ui_utils import QtWidgets
 #####################################################
 # Example tools
 
-class BasicAction(dtu.ToolDockItemBase):
+class BasicAction(tdu.ToolDockItemBase):
     TOOL_NAME = "Basic Action"
     BACKGROUND_COLOR = (80, 120, 80)
 
@@ -17,7 +17,7 @@ class BasicAction(dtu.ToolDockItemBase):
         print("triggered BasicAction")
 
 
-class BasicParamExample(dtu.ToolDockItemBase):
+class BasicParamExample(tdu.ToolDockItemBase):
     TOOL_NAME = "Basic Params"
 
     # function arguments can be extrapolated and automatically added as parameters
@@ -25,7 +25,7 @@ class BasicParamExample(dtu.ToolDockItemBase):
         print(arg_1, arg_2)
 
 
-class ComplexParamExample(dtu.ToolDockItemBase):
+class ComplexParamExample(tdu.ToolDockItemBase):
     TOOL_NAME = "Complex Params"
     BACKGROUND_COLOR = (50, 100, 160)
 
@@ -56,7 +56,7 @@ class ComplexParamExample(dtu.ToolDockItemBase):
         print("Extra right click action: {}".format(self.TOOL_NAME))
 
 
-class MultiButtonExample(dtu.ToolDockItemBase):
+class MultiButtonExample(tdu.ToolDockItemBase):
     TOOL_NAME = "Multi Buttons"
     BACKGROUND_COLOR = (160, 80, 20)
 
@@ -68,7 +68,7 @@ class MultiButtonExample(dtu.ToolDockItemBase):
         }
 
 
-class OverrideWidgetExample(dtu.ToolDockItemBase):
+class OverrideWidgetExample(tdu.ToolDockItemBase):
     TOOL_NAME = "Custom Widget"
 
     # if you want to be really fancy, you can override the widget creation like this
@@ -82,7 +82,7 @@ class OverrideWidgetExample(dtu.ToolDockItemBase):
 
 # tool classes can also be created from script paths like this
 simple_script_path = os.path.join(os.path.dirname(__file__), "simple_script_example.py")
-simple_script_cls = dtu.lk.dynamic_class_from_script(simple_script_path)
+simple_script_cls = tdu.lk.dynamic_class_from_script(simple_script_path)
 
 # you can then set properties of the class like this
 simple_script_cls.BACKGROUND_COLOR = (100, 100, 150)

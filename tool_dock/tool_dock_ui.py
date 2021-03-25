@@ -5,11 +5,9 @@ __modified__ = "2021-03-13"
 # Standard
 
 # Tool
-import importlib
-import os
 import sys
 
-from tool_dock import tool_dock_utils as dtu
+from tool_dock import tool_dock_utils as tdu
 # UI
 from tool_dock.ui import ui_utils
 from tool_dock.ui.ui_utils import QtCore, QtWidgets, QtGui
@@ -18,15 +16,12 @@ try:
     # subclasses defined in here will be read on window initialization
     from tool_dock.examples import tool_dock_examples
 
-    # Extra module paths can be defined via this environment variable
+    # Extra module paths can be defined via an environment variable
     # These paths will then be imported on startup
     # for use by pipelines that wish to add their own tools in this system
-    for module_import_str in os.environ.get(dtu.lk.env_extra_modules, "").split(";"):
-        if module_import_str:  # if not an empty string
-            importlib.import_module(module_import_str)
-
+    tdu.import_extra_modules()
     # Example of how to set the variable (this would have to happen before the DCC starts up, or early in it)
-    # os.environ["tool_dock_EXTRA_MODULES"] = "a_module;another_module"
+    # os.environ["TOOL_DOCK_EXTRA_MODULES"] = "a_module;another_module"
 
 except Exception as e:
     print(e)
@@ -42,7 +37,7 @@ class ToolDockWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
 
         self.dock_widgets = []
         self.title_bar_widgets = {}
-        self.settings = dtu.ToolDockSettings(QtCore.QSettings.IniFormat, QtCore.QSettings.UserScope, 'tool_dock')
+        self.settings = tdu.ToolDockSettings(QtCore.QSettings.IniFormat, QtCore.QSettings.UserScope, 'tool_dock')
 
         # add a static widget to dock other widgets around
         self.central_widget = QtWidgets.QWidget()
@@ -101,7 +96,7 @@ class ToolDockWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
 
         active_tools = self.settings.value(self.k_active_tools, defaultValue=list())
 
-        for tool_item_cls in dtu.get_tool_classes():  # type: dtu.ToolDockItemBase
+        for tool_item_cls in tdu.get_tool_classes():  # type: dtu.ToolDockItemBase
             if tool_item_cls.TOOL_NAME not in active_tools:  # only build for selected window actions
                 continue
 
@@ -225,12 +220,12 @@ class ToolDockWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
 
     def save_settings_to_file(self):
         self.ui_save_settings()
-        new_path = dtu.save_tooldock_settings(self.settings, current_tooldock=self.active_tooldock)
+        new_path = tdu.save_tooldock_settings(self.settings, current_tooldock=self.active_tooldock)
         if new_path:
             print("Saved Layout to: {}".format(new_path))
 
     def load_settings_from_file(self):
-        load_success = dtu.load_tooldock_settings(target_settings=self.settings,
+        load_success = tdu.load_tooldock_settings(target_settings=self.settings,
                                                   target_tooldock=self.active_tooldock)
         if load_success:
             self.ui_build_tool_widgets()
@@ -259,7 +254,7 @@ class ToolDockConfigurationDialog(QtWidgets.QDialog):
         super(ToolDockConfigurationDialog, self).__init__(parent=parent, *args, **kwargs)
         self.setWindowTitle("ToolDock Configuration")
 
-        self.tool_classes = {cls.TOOL_NAME: cls for cls in dtu.get_tool_classes()}
+        self.tool_classes = {cls.TOOL_NAME: cls for cls in tdu.get_tool_classes()}
 
         main_layout = QtWidgets.QVBoxLayout()
         self.setLayout(main_layout)
@@ -303,7 +298,7 @@ class ToolDockConfigurationDialog(QtWidgets.QDialog):
         tool_cls = self.tool_classes.get(item.text())  # type: dtu.ToolDockItemBase
 
         if tool_cls.SCRIPT_PATH:
-            script_preview_text = dtu.get_preview_from_script(tool_cls.SCRIPT_PATH)
+            script_preview_text = tdu.get_preview_from_script(tool_cls.SCRIPT_PATH)
         else:
             script_preview_text = "Defined in: {}".format(tool_cls.__module__)
 
