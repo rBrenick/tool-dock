@@ -23,8 +23,8 @@ class LocalConstants(object):
     dynamic_classes_generated = False
     dynamic_classes = {}
 
-    env_extra_modules = "tool_dock_EXTRA_MODULES"
-    env_script_folders = "tool_dock_SCRIPT_FOLDERS"
+    env_extra_modules = "TOOL_DOCK_EXTRA_MODULES"
+    env_script_folders = "TOOL_DOCK_SCRIPT_FOLDERS"
 
     # a base scripts folder can be defined via this environment variable
     # script files in this folder structure will be added as dynamic classes
@@ -245,7 +245,7 @@ def all_subclasses(cls):
     return set(cls.__subclasses__()).union([s for c in cls.__subclasses__() for s in all_subclasses(c)])
 
 
-def get_tooldock_item_classes():
+def get_tool_classes():
     if not lk.dynamic_classes_generated:
         lk.generate_dynamic_classes()
 

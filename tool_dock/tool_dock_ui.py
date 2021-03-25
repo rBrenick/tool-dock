@@ -116,20 +116,20 @@ class ToolDockWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
 
         active_tools = self.settings.value(self.k_active_tools, defaultValue=list())
 
-        for tooldock_item_cls in dtu.get_tooldock_item_classes():  # type: dtu.ToolDockItemBase
-            if tooldock_item_cls.TOOL_NAME not in active_tools:  # only build for selected window actions
+        for tool_item_cls in dtu.get_tool_classes():  # type: dtu.ToolDockItemBase
+            if tool_item_cls.TOOL_NAME not in active_tools:  # only build for selected window actions
                 continue
 
-            dock = QtWidgets.QDockWidget(tooldock_item_cls.TOOL_NAME, self)
+            dock = QtWidgets.QDockWidget(tool_item_cls.TOOL_NAME, self)
 
-            clean_tool_name = tooldock_item_cls.__name__.replace(" ", "_")
+            clean_tool_name = tool_item_cls.__name__.replace(" ", "_")
             dock_object_name = "{0}_QtObject".format(clean_tool_name)
             dock.setObjectName(dock_object_name)
 
-            tool_widget = tooldock_item_cls()  # type:dtu.ToolDockItemBase
+            tool_widget = tool_item_cls()  # type:dtu.ToolDockItemBase
             tool_widget.post_init()
             dock.setWidget(tool_widget)
-            dock.setToolTip(tooldock_item_cls.TOOL_TIP)
+            dock.setToolTip(tool_item_cls.TOOL_TIP)
 
             self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, dock)
             self.dock_widgets.append(dock)
@@ -231,7 +231,7 @@ class ToolDockWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
 
     def load_settings_from_file(self):
         load_success = dtu.load_tooldock_settings(target_settings=self.settings,
-                                                 target_tooldock=self.active_tooldock)
+                                                  target_tooldock=self.active_tooldock)
         if load_success:
             self.build_tooldock_display()
             # Wut? for some reason just putting this in a timer works while the other refresh functions don't
@@ -259,7 +259,7 @@ class ToolDockConfigurationDialog(QtWidgets.QDialog):
         super(ToolDockConfigurationDialog, self).__init__(parent=parent, *args, **kwargs)
         self.setWindowTitle("ToolDock Configuration")
 
-        self.tool_classes = {cls.TOOL_NAME: cls for cls in dtu.get_tooldock_item_classes()}
+        self.tool_classes = {cls.TOOL_NAME: cls for cls in dtu.get_tool_classes()}
 
         main_layout = QtWidgets.QVBoxLayout()
         self.setLayout(main_layout)
