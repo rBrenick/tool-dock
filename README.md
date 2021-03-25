@@ -18,9 +18,9 @@ Classes with a *get_tool_actions* function defined will be added as individual b
 
 # Extra Environment Variables
 
-*tool_dock_SCRIPT_FOLDERS* defines root folders for extra scripts that will be added as tools.
+*TOOL_DOCK_SCRIPT_FOLDERS* defines root folders for extra scripts that will be added as tools.
 
-*tool_dock_EXTRA_MODULES* defines extra modules to be imported on tool startup. Tools can be defined in these modules, which will then be available in the configurations.  
+*TOOL_DOCK_EXTRA_MODULES* defines extra modules to be imported on tool startup. Tools can be defined in these modules, which will then be available in the configurations.  
 
 
 # Install
