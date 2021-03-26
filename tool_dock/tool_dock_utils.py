@@ -29,9 +29,12 @@ class LocalConstants(object):
     env_extra_modules = "TOOL_DOCK_EXTRA_MODULES"
     env_script_folders = "TOOL_DOCK_SCRIPT_FOLDERS"
 
+    # settings keys
+    user_script_paths = "user_script_paths"
+
     # a base scripts folder can be defined via this environment variable
     # script files in this folder structure will be added as dynamic classes
-    script_folders = os.environ.get(env_script_folders, "D:/Google Drive/Scripting/_Scrsipts")
+    script_folders = os.environ.get(env_script_folders, "D:/Google Drive/Scripting/_Scripts___")
 
     def generate_dynamic_classes(self):
         if not self.script_folders:
@@ -47,7 +50,12 @@ class LocalConstants(object):
             self.dynamic_classes_from_script_folder(script_folder)
 
         if len(self.dynamic_classes.keys()) > 0:
-            print("Generated: {} tool classes from files in: {}".format(len(self.dynamic_classes), self.script_folders))
+            print("Generated: {} tool(s) from files in: {}".format(len(self.dynamic_classes), self.script_folders))
+
+        # generate classes user specified script paths
+        user_script_classes = self.dynamic_classes_from_user_settings()
+        if len(user_script_classes):
+            print("Generated: {} tool(s) from user files".format(len(user_script_classes)))
 
         self.dynamic_classes_generated = True
 
@@ -55,6 +63,26 @@ class LocalConstants(object):
         """Find all scripts in folder structure and add them as tool classes"""
         for script_path in get_paths_in_folder(script_folder, extension_filter=".py"):
             self.dynamic_class_from_script(script_path)
+
+    def dynamic_classes_from_user_settings(self):
+        """Generate classes for all user specified script paths"""
+        settings = get_tool_dock_settings()
+
+        script_classes = []
+        for user_script_path in settings.get_value(ToolDockSettings.k_user_script_paths, default=list()):
+            if not os.path.exists(user_script_path):
+                print("Script path does not exist: {}".format(user_script_path))
+                continue
+
+            script_cls = self.dynamic_class_from_script(user_script_path)
+            if not script_cls:
+                continue
+
+            print("added script from user settings: {}".format(user_script_path))
+            script_cls.IS_USER_SCRIPT = True
+            script_classes.append(script_cls)
+
+        return script_classes
 
     # for dynamic class creation in custom modules
     def dynamic_class_from_script(self, script_path):
@@ -82,6 +110,7 @@ class _InternalToolDockItemBase(QtWidgets.QWidget):
     REGISTER_SCENE_CALLBACK = False
 
     SCRIPT_PATH = None  # used by dynamically generated classes
+    IS_USER_SCRIPT = False  # is set to true for dynamically generated user scripts
 
     def __init__(self, *args, **kwargs):
         super(_InternalToolDockItemBase, self).__init__(*args, **kwargs)
@@ -235,6 +264,8 @@ class ToolDockItemBase(_InternalToolDockItemBase):
 
 
 class ToolDockSettings(QtCore.QSettings):
+    k_user_script_paths = "user_script_paths"
+
     def __init__(self, *args, **kwargs):
         super(ToolDockSettings, self).__init__(*args, **kwargs)
 
@@ -245,11 +276,19 @@ class ToolDockSettings(QtCore.QSettings):
 
         settings_val = self.value(key, defaultValue=default)
 
+        # safety for list types
+        if data_type == list and not isinstance(settings_val, list):
+            settings_val = [settings_val] if settings_val else list()
+
         # safety convert bool to proper type
         if data_type == bool:
             settings_val = True if settings_val in ("true", "True", "1", 1, True) else False
 
         return settings_val
+
+
+def get_tool_dock_settings():
+    return ToolDockSettings(QtCore.QSettings.IniFormat, QtCore.QSettings.UserScope, 'tool_dock')
 
 
 def import_extra_modules(refresh=False):

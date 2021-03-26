@@ -5,12 +5,12 @@ __modified__ = "2021-03-13"
 # Standard
 
 # Tool
-import sys
 
+from tool_dock import tool_dock_configure as tdc
 from tool_dock import tool_dock_utils as tdu
 # UI
 from tool_dock.ui import ui_utils
-from tool_dock.ui.ui_utils import QtCore, QtWidgets, QtGui
+from tool_dock.ui.ui_utils import QtCore, QtWidgets
 
 try:
     # subclasses defined in here will be read on window initialization
@@ -37,7 +37,7 @@ class ToolDockWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
 
         self.dock_widgets = []
         self.title_bar_widgets = {}
-        self.settings = tdu.ToolDockSettings(QtCore.QSettings.IniFormat, QtCore.QSettings.UserScope, 'tool_dock')
+        self.settings = tdu.get_tool_dock_settings()  # type: tdu.ToolDockSettings
 
         # add a static widget to dock other widgets around
         self.central_widget = QtWidgets.QWidget()
@@ -188,7 +188,7 @@ class ToolDockWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
     def configure_tooldock(self):
         """Choose which tools should be displayed for this tooldock"""
         active_tools = self.settings.value(self.k_active_tools, defaultValue=list())
-        win = ToolDockConfigurationDialog(self, active_tools=active_tools)
+        win = tdc.ToolDockConfigurationDialog(self, active_tools=active_tools)
         win.config_saved.connect(self.save_user_tooldock)
         return win.show()
 
@@ -246,89 +246,6 @@ class ToolDockWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
     def closeEvent(self, event):
         self.ui_save_settings()
         super(ToolDockWindow, self).closeEvent(event)
-
-
-class ToolDockConfigurationDialog(QtWidgets.QDialog):
-    """
-    Define which actions should be visible in the ToolDock
-    """
-    config_saved = QtCore.Signal(list)
-
-    def __init__(self, parent=ui_utils.get_app_window(), active_tools=None, *args, **kwargs):
-        super(ToolDockConfigurationDialog, self).__init__(parent=parent, *args, **kwargs)
-        self.setWindowTitle("ToolDock Configuration")
-
-        self.tool_classes = {cls.TOOL_NAME: cls for cls in tdu.get_tool_classes()}
-
-        main_layout = QtWidgets.QVBoxLayout()
-        self.setLayout(main_layout)
-
-        # add splitter
-        self.main_splitter = QtWidgets.QSplitter()
-        main_layout.addWidget(self.main_splitter)
-
-        # add tool list
-        self.tools_LW = QtWidgets.QListWidget()
-        self.tools_LW.itemSelectionChanged.connect(self.preview_script)
-        self.tools_LW.itemDoubleClicked.connect(ui_utils.toggle_list_widget_item_checked)
-        self.fill_tool_list(active_tools)
-        self.main_splitter.addWidget(self.tools_LW)
-
-        # add preview tab
-        self.script_preview_TE = QtWidgets.QTextEdit()
-        self.script_preview_TE.setWordWrapMode(QtGui.QTextOption.NoWrap)
-        self.script_preview_TE.setText("Script Preview")
-        self.main_splitter.addWidget(self.script_preview_TE)
-
-        # divide splitter in half
-        self.main_splitter.setSizes([sys.maxint, sys.maxint])
-
-        # Save Button
-        save_button = QtWidgets.QPushButton("Save")
-        save_button.clicked.connect(self.save_actions)
-        main_layout.addWidget(save_button)
-
-        # set to a nicer size
-        self.resize(QtCore.QSize(700, 400))
-
-    def preview_script(self):
-        selected_items = self.tools_LW.selectedItems()
-        if not selected_items:
-            return
-
-        # last selected script will be previewed
-        item = selected_items[-1]
-
-        tool_cls = self.tool_classes.get(item.text())  # type: tdu.ToolDockItemBase
-
-        script_preview_text = tdu.get_preview_from_tool(tool_cls)
-
-        self.script_preview_TE.setText(script_preview_text)
-
-    def fill_tool_list(self, active_tools):
-        """Populate ListWidget with items"""
-        sorted_tool_names = sorted(self.tool_classes.keys())
-
-        for tool_name in sorted_tool_names:
-            tool_cls = self.tool_classes.get(tool_name)  # type: tdu.ToolDockItemBase
-            lwi = QtWidgets.QListWidgetItem(self.tools_LW)
-            lwi.setText(tool_name)
-            lwi.setToolTip(tdu.get_tool_tip_from_tool(tool_cls))
-            lwi.setFlags(lwi.flags() | QtCore.Qt.ItemIsUserCheckable)
-            lwi.setCheckState(QtCore.Qt.Unchecked)
-
-            if active_tools and tool_name in active_tools:
-                lwi.setCheckState(QtCore.Qt.Checked)
-
-    def save_actions(self):
-        self.config_saved.emit(self.get_checked_tool_names())
-
-    def get_checked_tool_names(self):
-        checked_tool_names = []
-        for tool_lwi in ui_utils.get_list_widget_items(self.tools_LW):  # type:QtWidgets.QListWidgetItem
-            if tool_lwi.checkState() == QtCore.Qt.Checked:
-                checked_tool_names.append(tool_lwi.text())
-        return checked_tool_names
 
 
 def main(restore=False, force_refresh=False, index=None):
