@@ -87,6 +87,8 @@ class ToolDockWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
     def ui_build_tool_widgets(self):
         # remove any existing tooldock dock widgets
         for dock_widget in self.dock_widgets:  # type: QtWidgets.QDockWidget
+            tool_cls = dock_widget.widget()  # type: tdu.ToolDockItemBase
+            tool_cls._remove_callbacks()
             dock_widget.close()
             dock_widget.deleteLater()
         self.dock_widgets = []
@@ -94,9 +96,11 @@ class ToolDockWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
         # wait for deleteLater to finish
         ui_utils.process_q_events()
 
-        active_tools = self.settings.value(self.k_active_tools, defaultValue=list())
+        active_tools = self.settings.value(self.k_active_tools)
+        if not active_tools:
+            return
 
-        for tool_item_cls in tdu.get_tool_classes():  # type: tdu.ToolDockItemBase
+        for tool_item_cls in tdu.get_tool_classes():  # type: type(tdu.ToolDockItemBase)
             if tool_item_cls.TOOL_NAME not in active_tools:  # only build for selected window actions
                 continue
 
@@ -109,7 +113,7 @@ class ToolDockWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
             tool_widget = tool_item_cls()  # type:tdu.ToolDockItemBase
             tool_widget.post_init()
             dock.setWidget(tool_widget)
-            dock.setToolTip(tool_item_cls.TOOL_TIP)
+            dock.setToolTip(tdu.get_tool_tip_from_tool(tool_item_cls))
 
             self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, dock)
             self.dock_widgets.append(dock)
@@ -309,7 +313,7 @@ class ToolDockConfigurationDialog(QtWidgets.QDialog):
             tool_cls = self.tool_classes.get(tool_name)  # type: tdu.ToolDockItemBase
             lwi = QtWidgets.QListWidgetItem(self.tools_LW)
             lwi.setText(tool_name)
-            lwi.setToolTip(tool_cls.TOOL_TIP)
+            lwi.setToolTip(tdu.get_tool_tip_from_tool(tool_cls))
             lwi.setFlags(lwi.flags() | QtCore.Qt.ItemIsUserCheckable)
             lwi.setCheckState(QtCore.Qt.Unchecked)
 

@@ -29,6 +29,8 @@ class ComplexParamExample(tdu.ToolDockItemBase):
     TOOL_NAME = "Complex Params"
     BACKGROUND_COLOR = (50, 100, 160)
 
+    # REGISTER_SCENE_CALLBACK = True
+
     def __init__(self, *args, **kwargs):
         super(ComplexParamExample, self).__init__(*args, **kwargs)
 
@@ -54,6 +56,10 @@ class ComplexParamExample(tdu.ToolDockItemBase):
 
     def example_right_click_action(self):
         print("Extra right click action: {}".format(self.TOOL_NAME))
+
+    def on_scene_change(self):
+        """if REGISTER_SCENE_CALLBACK is True, this function will be called when the current scene changes"""
+        print("Scene changed, ComplexParams can do some actions here")
 
 
 class MultiButtonExample(tdu.ToolDockItemBase):

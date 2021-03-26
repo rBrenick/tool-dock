@@ -15,6 +15,10 @@ def reload_module(full_refresh=False):
     from .examples import tool_dock_examples
     from . import tool_dock_utils
     from . import tool_dock_ui
+    from . import dcc
+
+    # wipe all the scene callbacks before losing the connections via the reloads
+    tool_dock_utils.dcc_interface.remove_all_callbacks()
 
     # custom wonky reload things here
     for window_index, tooldock_window in ui_utils.wh.windows.items():
@@ -32,8 +36,9 @@ def reload_module(full_refresh=False):
     if full_refresh:  # under conditional argument because WindowHandler class is defined here
         reload(ui_utils)
 
+    reload(dcc.base_dcc_module)
+    reload(dcc.active_dcc_module)
     reload(tool_dock_utils)
     reload(tool_dock_examples)
     tool_dock_utils.import_extra_modules(refresh=True)
     reload(tool_dock_ui)
-

@@ -6,12 +6,14 @@ import runpy
 import sys
 from functools import partial
 
+from tool_dock import dcc
 from tool_dock.ui import parameter_grid
 from tool_dock.ui import ui_utils
 from tool_dock.ui.ui_utils import QtCore, QtWidgets
 
 PY_2 = sys.version_info[0] < 3
 background_form = "background-color:rgb({0}, {1}, {2})"
+dcc_interface = dcc.Interface()
 
 
 class RequiresValueType(object):
@@ -77,6 +79,7 @@ class _InternalToolDockItemBase(QtWidgets.QWidget):
     TOOL_NAME = "TOOL"
     TOOL_TIP = "TOOLTIP UNDEFINED"
     BACKGROUND_COLOR = None
+    REGISTER_SCENE_CALLBACK = False
 
     SCRIPT_PATH = None  # used by dynamically generated classes
 
@@ -95,6 +98,16 @@ class _InternalToolDockItemBase(QtWidgets.QWidget):
             {"Set Splitter - Horizontal": partial(self.set_splitter_orientation, False)},
         ]
 
+        if self.SCRIPT_PATH:
+            self.context_menu_actions.append(
+                {"Open in Script Editor": partial(dcc_interface.open_script_in_editor, self.SCRIPT_PATH)}
+            )
+
+        # register scene change callback
+        self._tool_callbacks = []
+        if self.REGISTER_SCENE_CALLBACK:
+            self._tool_callbacks.extend(dcc_interface.register_scene_change_callback(self._on_scene_change))
+
         # if multiple actions defined for Tool
         self._tool_actions = self.get_tool_actions()
         self._parameters_auto_generated = False
@@ -108,10 +121,10 @@ class _InternalToolDockItemBase(QtWidgets.QWidget):
         self.main_splitter.addWidget(self.param_grid)
 
         # build run buttons and add to splitter
-        ui_widget = self.build_ui_widget()
+        self.main_ui_widget = self.build_ui_widget()
         if self.BACKGROUND_COLOR:
-            ui_widget.setStyleSheet(background_form.format(*self.BACKGROUND_COLOR))
-        self.main_splitter.addWidget(ui_widget)
+            self.main_ui_widget.setStyleSheet(background_form.format(*self.BACKGROUND_COLOR))
+        self.main_splitter.addWidget(self.main_ui_widget)
 
         # default hide parameter grid
         self.main_splitter.handle(1).setEnabled(False)
@@ -145,17 +158,6 @@ class _InternalToolDockItemBase(QtWidgets.QWidget):
         orientation = QtCore.Qt.Vertical if vertical else QtCore.Qt.Horizontal
         self.main_splitter.setOrientation(orientation)
 
-    def post_init(self):
-        # auto generate parameter widgets if run function has arguments
-        # skip if parameters have been manually defined
-        if not self.param_grid.parameters:
-            self.auto_populate_parameters()
-
-        # show parameter grid if parameters are defined
-        if self.param_grid.parameters:
-            self.main_splitter.handle(1).setEnabled(True)
-            self.main_splitter.setSizes([sys.maxint, sys.maxint])
-
     def build_ui_widget(self):
         """
         Create buttons to execute run function
@@ -182,6 +184,29 @@ class _InternalToolDockItemBase(QtWidgets.QWidget):
             main_widget = btn
         return main_widget
 
+    def deleteLater(self):
+        self._remove_callbacks()
+        super(_InternalToolDockItemBase, self).deleteLater()
+
+    def _remove_callbacks(self):
+        [dcc_interface.remove_callback(c) for c in self._tool_callbacks]
+        self._tool_callbacks = []
+
+    def post_init(self):
+        # auto generate parameter widgets if run function has arguments
+        # skip if parameters have been manually defined
+        if not self.param_grid.parameters:
+            self.auto_populate_parameters()
+
+        # show parameter grid if parameters are defined
+        if self.param_grid.parameters:
+            self.main_splitter.handle(1).setEnabled(True)
+            self.main_splitter.setSizes([sys.maxint, sys.maxint])
+
+    def _on_scene_change(self, *args, **kwargs):
+        """internal method because maya callbacks sends args and I don't want to have to define that everywhere"""
+        self.on_scene_change()
+
     def _run(self, func=None):
         kwargs = {}  # maybe put something in here by default? not sure
         if func:
@@ -197,6 +222,9 @@ class _InternalToolDockItemBase(QtWidgets.QWidget):
 
     def get_tool_actions(self):
         return {}
+
+    def on_scene_change(self):
+        pass
 
 
 class ToolDockItemBase(_InternalToolDockItemBase):
@@ -312,6 +340,10 @@ def get_preview_from_tool(tool_cls):
         script_preview_text = get_preview_from_script_cls(tool_cls)
 
     return script_preview_text
+
+
+def get_tool_tip_from_tool(tool_cls):
+    return "{}\n{}".format(tool_cls.TOOL_NAME, tool_cls.TOOL_TIP)
 
 
 def make_class_from_script(script_path, tool_name):
