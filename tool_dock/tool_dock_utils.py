@@ -265,11 +265,25 @@ class _InternalToolDockItemBase(QtWidgets.QWidget):
         if isinstance(color, QtGui.QColor):
             color = color.getRgb()[:3]
 
+        param_grid_header = self.param_grid.header()  # type: QtWidgets.QHeaderView
+
+        # reset colors
         if color is None:
             self.main_ui_widget.setStyleSheet("")
+            self.param_grid.setStyleSheet("")
+            param_grid_header.setStyleSheet("")
             return
 
+        # use subtler color equivalent for parameter grid
+        col = QtGui.QColor()
+        col.setRgb(*color)
+        col.setHsv(col.hue(), col.saturation() * 0.5, col.value() * 0.5)
+        low_set_color = col.getRgb()[:3]
+
+        # set colors on widgets
         self.main_ui_widget.setStyleSheet(background_form.format(*color))
+        self.param_grid.setStyleSheet("QTreeView{{background-color:rgb({},{},{})}}".format(*low_set_color))
+        param_grid_header.setStyleSheet(background_form.format(*color))
 
     def reset_background_color(self):
         self.set_background_color(self._default_background_color)
@@ -315,6 +329,8 @@ class _InternalToolDockItemBase(QtWidgets.QWidget):
         if self.param_grid.parameters:
             self.main_splitter.handle(1).setEnabled(True)
             self.main_splitter.setSizes([sys.maxint, sys.maxint])
+        else:
+            self.main_splitter.setHandleWidth(0)
 
     def _on_scene_change(self, *args, **kwargs):
         """internal method because maya callbacks sends args and I don't want to have to define that everywhere"""
