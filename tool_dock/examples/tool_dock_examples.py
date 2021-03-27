@@ -43,7 +43,6 @@ class ComplexParamExample(tdu.ToolDockItemBase):
 
         # extra actions can be added to the right click menu like this
         self.context_menu_actions.extend([
-            "-",
             {"Extra Right-Click Action": self.example_right_click_action}
         ])
 

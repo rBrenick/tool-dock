@@ -4,6 +4,7 @@ import inspect
 import os
 import runpy
 import sys
+from copy import copy
 from functools import partial
 
 from tool_dock import dcc
@@ -32,6 +33,7 @@ class LocalConstants(object):
     # settings keys
     user_script_paths = "user_script_paths"
     user_colors = "user_colors"
+    user_labels = "user_labels"
 
     # a base scripts folder can be defined via this environment variable
     # script files in this folder structure will be added as dynamic classes
@@ -127,18 +129,24 @@ class _InternalToolDockItemBase(QtWidgets.QWidget):
         # right click menu
         self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self.open_context_menu)
-        self.context_menu_actions = [
+        self.context_menu_actions = []
+
+        self._internal_context_menu_actions = [
+            {"Set Label": self.open_button_label_editor},
             {"Set Background Color": self.open_background_color_picker},
-            {"Reset Background Color": self.reset_background_color},
             "-",
             {"Set Splitter - Vertical": partial(self.set_splitter_orientation, True)},
             {"Set Splitter - Horizontal": partial(self.set_splitter_orientation, False)},
+            "-",
+            {"Reset Label": self.reset_tool_label},
+            {"Reset Background Color": self.reset_background_color},
         ]
 
         if self.SCRIPT_PATH:
-            self.context_menu_actions.append(
-                {"Open in Script Editor": partial(dcc_interface.open_script_in_editor, self.SCRIPT_PATH)}
+            self.context_menu_actions.insert(
+                0, {"Open in Script Editor": partial(dcc_interface.open_script_in_editor, self.SCRIPT_PATH)}
             )
+            self.context_menu_actions.insert(1, "-")
 
         # register scene change callback
         self._tool_callbacks = []
@@ -166,6 +174,7 @@ class _InternalToolDockItemBase(QtWidgets.QWidget):
         self.main_splitter.setSizes([0, 100])
         self.main_layout.addWidget(self.main_splitter)
 
+        ####################################################################
         # get user color override
         self._default_background_color = self.BACKGROUND_COLOR
 
@@ -177,8 +186,21 @@ class _InternalToolDockItemBase(QtWidgets.QWidget):
         if self.BACKGROUND_COLOR:
             self.set_background_color(self.BACKGROUND_COLOR)
 
+        ####################################################################
+        # get user label override
+        self._default_label = self.TOOL_LABEL
+
+        user_labels = self.settings.get_value(lk.user_labels, default=dict())
+        user_label_override = user_labels.get(self.TOOL_NAME)
+        if user_label_override:
+            self.TOOL_LABEL = user_label_override
+        self.set_tool_label(self.TOOL_LABEL)
+
     def open_context_menu(self):
-        return ui_utils.build_menu_from_action_list(self.context_menu_actions)
+        action_list = copy(self.context_menu_actions)
+        action_list.append("-")
+        action_list.extend(self._internal_context_menu_actions)
+        return ui_utils.build_menu_from_action_list(action_list)
 
     def auto_populate_parameters(self):
         """Convenience function for generating parameters based on arguments of 'run'"""
@@ -252,6 +274,28 @@ class _InternalToolDockItemBase(QtWidgets.QWidget):
     def reset_background_color(self):
         self.set_background_color(self._default_background_color)
         self.settings.set_user_color(self.TOOL_NAME, color=None)
+
+    def open_button_label_editor(self):
+        if not isinstance(self.main_ui_widget, QtWidgets.QPushButton):
+            # TODO: add support for multiple tool buttons
+            return
+        current_text = self.main_ui_widget.text()
+        new_text, ok = QtWidgets.QInputDialog.getText(self, "New Tool Label",
+                                                      "Enter new tool label for: {}".format(self.TOOL_NAME),
+                                                      text=current_text)
+        if ok:
+            self.settings.set_user_label(self.TOOL_NAME, new_text)
+            self.set_tool_label(new_text)
+            self.TOOL_LABEL = new_text
+
+    def set_tool_label(self, label):
+        if not isinstance(self.main_ui_widget, QtWidgets.QPushButton):
+            return
+        self.main_ui_widget.setText(label)
+
+    def reset_tool_label(self):
+        self.set_tool_label(self._default_label)
+        self.settings.set_user_label(self.TOOL_NAME, label=None)
 
     def deleteLater(self):
         self._remove_callbacks()
@@ -334,6 +378,11 @@ class ToolDockSettings(QtCore.QSettings):
         user_colors = self.get_value(lk.user_colors, default=dict())
         user_colors[tool_name] = color
         self.setValue(lk.user_colors, user_colors)
+
+    def set_user_label(self, tool_name, label):
+        user_labels = self.get_value(lk.user_labels, default=dict())
+        user_labels[tool_name] = label
+        self.setValue(lk.user_labels, user_labels)
 
 
 def get_tool_dock_settings():
