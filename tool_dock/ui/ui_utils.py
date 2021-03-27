@@ -336,3 +336,32 @@ def open_color_picker(current_color=None, color_signal=None):
 
     if picker.exec_():
         return picker.currentColor()
+
+
+class ContentResizeButton(QtWidgets.QPushButton):
+    def resizeEvent(self, event):
+        self.update_icon_size()
+        self.update_button_text_size()
+
+    def update_icon_size(self):
+        min_size = min(self.size().width(), self.size().height())
+        self.setIconSize(QtCore.QSize(min_size * 0.9, min_size * 0.9))
+
+    def update_button_text_size(self):
+        # reset font size so .fontMetrics() make sense
+        font = QtGui.QFont('Serif', 8, QtGui.QFont.Normal)
+        self.setFont(font)
+
+        # resize text to scale with widget
+        size = self.size()
+        h_factor = float(size.height()) / self.fontMetrics().height()
+        w_factor = float(size.width()) / max(self.fontMetrics().width(self.text()), 0.0001)
+
+        # the smaller value determines max text size
+        factor = min(h_factor, w_factor) * 0.9
+
+        # clamp output to a min size
+        final_point_size = max(font.pointSizeF() * factor, 8.0)
+        font.setPointSizeF(final_point_size)
+
+        self.setFont(font)

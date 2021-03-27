@@ -5,6 +5,8 @@ from tool_dock import tool_dock_utils as tdu
 from tool_dock.ui import parameter_grid as pg
 from tool_dock.ui.ui_utils import QtWidgets
 
+example_icon_path = os.path.join(os.path.dirname(__file__), "example_icon.png")
+
 
 #####################################################
 # Example tools
@@ -12,6 +14,7 @@ from tool_dock.ui.ui_utils import QtWidgets
 class BasicAction(tdu.ToolDockItemBase):
     TOOL_NAME = "Basic Action"
     BACKGROUND_COLOR = (80, 120, 80)
+    ICON = example_icon_path
 
     def run(self):
         print("triggered BasicAction")

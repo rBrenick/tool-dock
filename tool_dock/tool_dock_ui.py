@@ -82,7 +82,7 @@ class ToolDockWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
 
         # build dock widgets for all configured tools
         self.ui_build_tool_widgets()
-        self.ui_load_settings()
+        self.ui_load_settings_timer.start(0)
 
     def ui_build_tool_widgets(self):
         # remove any existing tooldock dock widgets
@@ -106,7 +106,7 @@ class ToolDockWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
 
             dock = QtWidgets.QDockWidget(tool_item_cls.TOOL_NAME, self)
 
-            clean_tool_name = tool_item_cls.__name__.replace(" ", "_")
+            clean_tool_name = tool_item_cls.TOOL_NAME.replace(" ", "_")
             dock_object_name = "{0}_QtObject".format(clean_tool_name)
             dock.setObjectName(dock_object_name)
 

@@ -110,6 +110,7 @@ class _InternalToolDockItemBase(QtWidgets.QWidget):
     TOOL_LABEL = None  # will be same as TOOL_NAME unless specified
     TOOL_TIP = "TOOLTIP UNDEFINED"
     BACKGROUND_COLOR = None
+    ICON = None
     REGISTER_SCENE_CALLBACK = False
 
     SCRIPT_PATH = None  # used by dynamically generated classes
@@ -192,7 +193,7 @@ class _InternalToolDockItemBase(QtWidgets.QWidget):
 
         user_labels = self.settings.get_value(lk.user_labels, default=dict())
         user_label_override = user_labels.get(self.TOOL_NAME)
-        if user_label_override:
+        if user_label_override is not None:
             self.TOOL_LABEL = user_label_override
         self.set_tool_label(self.TOOL_LABEL)
 
@@ -236,8 +237,8 @@ class _InternalToolDockItemBase(QtWidgets.QWidget):
             multi_button_layout = QtWidgets.QHBoxLayout()
             multi_button_layout.setContentsMargins(0, 0, 0, 0)
             for name, func in self._tool_actions.items():
-                btn = QtWidgets.QPushButton(name)
-                btn.setSizePolicy(QtWidgets.QSizePolicy.Ignored, QtWidgets.QSizePolicy.MinimumExpanding)
+                btn = ui_utils.ContentResizeButton(name)
+                btn.setSizePolicy(QtWidgets.QSizePolicy.Ignored, QtWidgets.QSizePolicy.Ignored)
 
                 btn.clicked.connect(partial(self._run, func))
                 multi_button_layout.addWidget(btn)
@@ -246,18 +247,33 @@ class _InternalToolDockItemBase(QtWidgets.QWidget):
             multi_button_widget.setLayout(multi_button_layout)
             main_widget = multi_button_widget
         else:
-            btn = QtWidgets.QPushButton("{}".format(self.TOOL_NAME))
-            btn.setSizePolicy(QtWidgets.QSizePolicy.Ignored, QtWidgets.QSizePolicy.MinimumExpanding)
+            btn = ui_utils.ContentResizeButton("{}".format(self.TOOL_NAME))
+            btn.setSizePolicy(QtWidgets.QSizePolicy.Ignored, QtWidgets.QSizePolicy.Ignored)
             btn.clicked.connect(self._run)
+
+            # set Icon on button
+            if self.ICON:
+                # if it's a string, assume it's a path to an icon image
+                if isinstance(self.ICON, str):
+                    self.ICON = QtGui.QIcon(self.ICON)
+                btn.setIcon(self.ICON)
+
             main_widget = btn
+
         return main_widget
 
     def open_background_color_picker(self):
         new_color = ui_utils.open_color_picker(current_color=self.BACKGROUND_COLOR,
                                                color_signal=self.set_background_color)
         if new_color:
-            self.settings.set_user_color(self.TOOL_NAME, color=new_color.getRgb()[:3])
+            color_values = new_color.getRgb()[:3]
+
+            # store values in instance and settings
+            self.BACKGROUND_COLOR = color_values
+            self.settings.set_user_color(self.TOOL_NAME, color=color_values)
+
             self.set_background_color(new_color)
+
         else:
             self.set_background_color(self.BACKGROUND_COLOR)
 
@@ -278,11 +294,11 @@ class _InternalToolDockItemBase(QtWidgets.QWidget):
         col = QtGui.QColor()
         col.setRgb(*color)
         col.setHsv(col.hue(), col.saturation() * 0.5, col.value() * 0.5)
-        low_set_color = col.getRgb()[:3]
+        subtle_color = col.getRgb()[:3]
 
         # set colors on widgets
         self.main_ui_widget.setStyleSheet(background_form.format(*color))
-        self.param_grid.setStyleSheet("QTreeView{{background-color:rgb({},{},{})}}".format(*low_set_color))
+        self.param_grid.setStyleSheet("QTreeView{{background-color:rgb({},{},{})}}".format(*subtle_color))
         param_grid_header.setStyleSheet(background_form.format(*color))
 
     def reset_background_color(self):
@@ -293,6 +309,7 @@ class _InternalToolDockItemBase(QtWidgets.QWidget):
         if not isinstance(self.main_ui_widget, QtWidgets.QPushButton):
             # TODO: add support for multiple tool buttons
             return
+
         current_text = self.main_ui_widget.text()
         new_text, ok = QtWidgets.QInputDialog.getText(self, "New Tool Label",
                                                       "Enter new tool label for: {}".format(self.TOOL_NAME),
@@ -306,6 +323,8 @@ class _InternalToolDockItemBase(QtWidgets.QWidget):
         if not isinstance(self.main_ui_widget, QtWidgets.QPushButton):
             return
         self.main_ui_widget.setText(label)
+        # trigger resize event so text scale gets updated
+        self.main_ui_widget.resizeEvent(QtGui.QResizeEvent(self.main_ui_widget.size(), QtCore.QSize()))
 
     def reset_tool_label(self):
         self.set_tool_label(self._default_label)
