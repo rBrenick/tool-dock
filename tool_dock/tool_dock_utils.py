@@ -9,7 +9,7 @@ from functools import partial
 from tool_dock import dcc
 from tool_dock.ui import parameter_grid
 from tool_dock.ui import ui_utils
-from tool_dock.ui.ui_utils import QtCore, QtWidgets
+from tool_dock.ui.ui_utils import QtCore, QtWidgets, QtGui
 
 PY_2 = sys.version_info[0] < 3
 background_form = "background-color:rgb({0}, {1}, {2})"
@@ -31,6 +31,7 @@ class LocalConstants(object):
 
     # settings keys
     user_script_paths = "user_script_paths"
+    user_colors = "user_colors"
 
     # a base scripts folder can be defined via this environment variable
     # script files in this folder structure will be added as dynamic classes
@@ -55,7 +56,7 @@ class LocalConstants(object):
         # generate classes user specified script paths
         user_script_classes = self.dynamic_classes_from_user_settings()
         if len(user_script_classes):
-            print("Generated: {} tool(s) from user files".format(len(user_script_classes)))
+            print("Generated: {} tool(s) from user scripts".format(len(user_script_classes)))
 
         self.dynamic_classes_generated = True
 
@@ -78,7 +79,6 @@ class LocalConstants(object):
             if not script_cls:
                 continue
 
-            print("added script from user settings: {}".format(user_script_path))
             script_cls.IS_USER_SCRIPT = True
             script_classes.append(script_cls)
 
@@ -105,6 +105,7 @@ class _InternalToolDockItemBase(QtWidgets.QWidget):
     Internal Base Class for tools logic
     """
     TOOL_NAME = "TOOL"
+    TOOL_LABEL = None  # will be same as TOOL_NAME unless specified
     TOOL_TIP = "TOOLTIP UNDEFINED"
     BACKGROUND_COLOR = None
     REGISTER_SCENE_CALLBACK = False
@@ -114,6 +115,10 @@ class _InternalToolDockItemBase(QtWidgets.QWidget):
 
     def __init__(self, *args, **kwargs):
         super(_InternalToolDockItemBase, self).__init__(*args, **kwargs)
+        if not self.TOOL_LABEL:
+            self.TOOL_LABEL = self.TOOL_NAME
+
+        self.settings = get_tool_dock_settings()
 
         self.main_layout = QtWidgets.QHBoxLayout()
         self.main_layout.setContentsMargins(0, 0, 0, 0)
@@ -123,6 +128,9 @@ class _InternalToolDockItemBase(QtWidgets.QWidget):
         self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self.open_context_menu)
         self.context_menu_actions = [
+            {"Set Background Color": self.open_background_color_picker},
+            {"Reset Background Color": self.reset_background_color},
+            "-",
             {"Set Splitter - Vertical": partial(self.set_splitter_orientation, True)},
             {"Set Splitter - Horizontal": partial(self.set_splitter_orientation, False)},
         ]
@@ -151,14 +159,23 @@ class _InternalToolDockItemBase(QtWidgets.QWidget):
 
         # build run buttons and add to splitter
         self.main_ui_widget = self.build_ui_widget()
-        if self.BACKGROUND_COLOR:
-            self.main_ui_widget.setStyleSheet(background_form.format(*self.BACKGROUND_COLOR))
         self.main_splitter.addWidget(self.main_ui_widget)
 
         # default hide parameter grid
         self.main_splitter.handle(1).setEnabled(False)
         self.main_splitter.setSizes([0, 100])
         self.main_layout.addWidget(self.main_splitter)
+
+        # get user color override
+        self._default_background_color = self.BACKGROUND_COLOR
+
+        user_colors = self.settings.get_value(lk.user_colors, default=dict())
+        user_color_override = user_colors.get(self.TOOL_NAME)
+        if user_color_override:
+            self.BACKGROUND_COLOR = user_color_override
+
+        if self.BACKGROUND_COLOR:
+            self.set_background_color(self.BACKGROUND_COLOR)
 
     def open_context_menu(self):
         return ui_utils.build_menu_from_action_list(self.context_menu_actions)
@@ -212,6 +229,29 @@ class _InternalToolDockItemBase(QtWidgets.QWidget):
             btn.clicked.connect(self._run)
             main_widget = btn
         return main_widget
+
+    def open_background_color_picker(self):
+        new_color = ui_utils.open_color_picker(current_color=self.BACKGROUND_COLOR,
+                                               color_signal=self.set_background_color)
+        if new_color:
+            self.settings.set_user_color(self.TOOL_NAME, color=new_color.getRgb()[:3])
+            self.set_background_color(new_color)
+        else:
+            self.set_background_color(self.BACKGROUND_COLOR)
+
+    def set_background_color(self, color):
+        if isinstance(color, QtGui.QColor):
+            color = color.getRgb()[:3]
+
+        if color is None:
+            self.main_ui_widget.setStyleSheet("")
+            return
+
+        self.main_ui_widget.setStyleSheet(background_form.format(*color))
+
+    def reset_background_color(self):
+        self.set_background_color(self._default_background_color)
+        self.settings.set_user_color(self.TOOL_NAME, color=None)
 
     def deleteLater(self):
         self._remove_callbacks()
@@ -280,11 +320,20 @@ class ToolDockSettings(QtCore.QSettings):
         if data_type == list and not isinstance(settings_val, list):
             settings_val = [settings_val] if settings_val else list()
 
+        # safety for dict types
+        if data_type == dict and not isinstance(settings_val, dict):
+            settings_val = dict(settings_val)
+
         # safety convert bool to proper type
         if data_type == bool:
             settings_val = True if settings_val in ("true", "True", "1", 1, True) else False
 
         return settings_val
+
+    def set_user_color(self, tool_name, color):
+        user_colors = self.get_value(lk.user_colors, default=dict())
+        user_colors[tool_name] = color
+        self.setValue(lk.user_colors, user_colors)
 
 
 def get_tool_dock_settings():

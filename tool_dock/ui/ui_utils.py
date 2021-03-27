@@ -318,3 +318,21 @@ def get_list_widget_items(list_widget):
 
 def process_q_events():
     return Q_APP.processEvents()
+
+
+def open_color_picker(current_color=None, color_signal=None):
+    picker = QtWidgets.QColorDialog(parent=get_app_window())
+
+    if current_color:
+        if isinstance(current_color, (list, tuple)):
+            color = QtGui.QColor()
+            color.setRgb(*current_color)
+        else:
+            color = current_color
+        picker.setCurrentColor(color)
+
+    if color_signal:
+        picker.currentColorChanged.connect(color_signal)
+
+    if picker.exec_():
+        return picker.currentColor()
