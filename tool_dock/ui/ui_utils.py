@@ -354,8 +354,15 @@ class ContentResizeButton(QtWidgets.QPushButton):
 
         # resize text to scale with widget
         size = self.size()
+        icon_width = 0
+        if self.icon():
+            icon_width = self.iconSize().width()
+
         h_factor = float(size.height()) / self.fontMetrics().height()
-        w_factor = float(size.width()) / max(self.fontMetrics().width(self.text()), 0.0001)
+        w_factor = float(size.width()) / max((self.fontMetrics().width(self.text()) + icon_width), 0.0001)
+
+        if self.text() == "Basic Action":
+            print h_factor, w_factor
 
         # the smaller value determines max text size
         factor = min(h_factor, w_factor) * 0.9
