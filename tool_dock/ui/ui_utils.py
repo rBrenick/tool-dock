@@ -361,9 +361,6 @@ class ContentResizeButton(QtWidgets.QPushButton):
         h_factor = float(size.height()) / self.fontMetrics().height()
         w_factor = float(size.width()) / max((self.fontMetrics().width(self.text()) + icon_width), 0.0001)
 
-        if self.text() == "Basic Action":
-            print h_factor, w_factor
-
         # the smaller value determines max text size
         factor = min(h_factor, w_factor) * 0.9
 
