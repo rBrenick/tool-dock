@@ -35,7 +35,8 @@ class ToolDockWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
         self.window_index = window_index
         self.setWindowTitle("ToolDockWindow_{}".format(self.window_index))
 
-        self.dock_widgets = []
+        self.tool_dock_widgets = []
+        self.spacer_dock_widgets = []
         self.title_bar_widgets = {}
         self.settings = tdu.lk.settings  # type: tdu.ToolDockSettings
 
@@ -56,6 +57,7 @@ class ToolDockWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
         menu_bar.addAction("Configure", self.configure_tooldock)
         layout_menu = menu_bar.addMenu("Layout")  # type: QtWidgets.QMenu
         layout_menu.addAction("Set Window Name", self.ui_set_window_title)
+        layout_menu.addAction("Add Spacer", self.ui_add_spacer)
         layout_menu.addAction("Lock Layout", self.ui_lock_layout)
         layout_menu.addAction("Unlock Layout", self.ui_unlock_layout)
         layout_menu.addSeparator()
@@ -73,6 +75,7 @@ class ToolDockWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
         self.k_layout_locked = "{}/layout_locked".format(self.active_tooldock)
         self.k_tool_splitters = "{}/tool_splitters".format(self.active_tooldock)
         self.k_param_grid_ui = "{}/param_grid".format(self.active_tooldock)
+        self.k_spacer_count = "{}/spacer_count".format(self.active_tooldock)
 
         # a timer can also be used for triggering the load settings
         # for some reason this sometimes works better than any qt refresh option
@@ -86,12 +89,12 @@ class ToolDockWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
 
     def ui_build_tool_widgets(self):
         # remove any existing tooldock dock widgets
-        for dock_widget in self.dock_widgets:  # type: QtWidgets.QDockWidget
+        for dock_widget in self.tool_dock_widgets:  # type: QtWidgets.QDockWidget
             tool_cls = dock_widget.widget()  # type: tdu.ToolDockItemBase
             tool_cls._remove_callbacks()
             dock_widget.close()
             dock_widget.deleteLater()
-        self.dock_widgets = []
+        self.tool_dock_widgets = []
 
         # wait for deleteLater to finish
         ui_utils.process_q_events()
@@ -116,7 +119,12 @@ class ToolDockWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
             dock.setToolTip(tdu.get_tool_tip_from_tool(tool_item_cls))
 
             self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, dock)
-            self.dock_widgets.append(dock)
+            self.tool_dock_widgets.append(dock)
+
+        # add spacer widgets
+        spacer_count = self.settings.get_value(self.k_spacer_count, default=0)
+        for _ in range(spacer_count):
+            self.ui_add_spacer()
 
     def ui_load_settings(self):
         print("loading ui settings: {}".format(self.active_tooldock))
@@ -131,7 +139,7 @@ class ToolDockWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
         # restore splitters between parameter_grid and run button
         dock_splitters = self.settings.value(self.k_tool_splitters)
         if dock_splitters:
-            for dock_widget in self.dock_widgets:
+            for dock_widget in self.tool_dock_widgets:
                 tool_item = dock_widget.widget()  # type:tdu.ToolDockItemBase
                 splitter_data = dock_splitters.get(tool_item.TOOL_NAME)
                 if not splitter_data:
@@ -150,7 +158,7 @@ class ToolDockWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
         # restore parameter_grid header sizes
         parameter_grid_ui_settings = self.settings.value(self.k_param_grid_ui)
         if parameter_grid_ui_settings:
-            for dock_widget in self.dock_widgets:
+            for dock_widget in self.tool_dock_widgets:
                 tool_item = dock_widget.widget()  # type:tdu.ToolDockItemBase
                 tool_param_grid = parameter_grid_ui_settings.get(tool_item.TOOL_NAME)
                 if not tool_param_grid:
@@ -169,7 +177,7 @@ class ToolDockWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
         # store size of parameter_grid header sections
         tool_splitters = {}
         parameter_grids = {}
-        for dock_widget in self.dock_widgets:  # type: QtWidgets.QDockWidget
+        for dock_widget in self.tool_dock_widgets:  # type: QtWidgets.QDockWidget
             tool_item = dock_widget.widget()  # type:tdu.ToolDockItemBase
 
             # save parameter_grid settings
@@ -183,6 +191,7 @@ class ToolDockWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
 
         self.settings.setValue(self.k_tool_splitters, tool_splitters)
         self.settings.setValue(self.k_param_grid_ui, parameter_grids)
+        self.settings.setValue(self.k_spacer_count, len(self.spacer_dock_widgets))
         print("Saved UI settings {}".format(self.active_tooldock))
 
     def configure_tooldock(self):
@@ -207,8 +216,34 @@ class ToolDockWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
         if ok:
             self.setWindowTitle(val)
 
+    def ui_add_spacer(self):
+        dock = QtWidgets.QDockWidget("Spacer", self)
+
+        dock_object_name = "_SPACER_{0}_QtObject".format(len(self.spacer_dock_widgets))
+        dock.setObjectName(dock_object_name)
+
+        # empty widget for spacer
+        dock.setWidget(QtWidgets.QWidget())
+        self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, dock)
+
+        # Build right click menu
+        action_list = [
+            {"Delete Spacer": lambda: self.ui_delete_spacer(dock)}
+        ]
+
+        dock.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        dock.customContextMenuRequested.connect(lambda: ui_utils.build_menu_from_action_list(action_list))
+
+        self.spacer_dock_widgets.append(dock)
+
+    def ui_delete_spacer(self, dock_widget):
+        # Delete spacer UI
+        dock_widget.close()
+        dock_widget.deleteLater()
+        self.spacer_dock_widgets.remove(dock_widget)
+
     def ui_lock_layout(self):
-        for dock in self.dock_widgets:  # type:QtWidgets.QDockWidget
+        for dock in self.tool_dock_widgets + self.spacer_dock_widgets:  # type:QtWidgets.QDockWidget
             self.title_bar_widgets[dock] = dock.titleBarWidget()
             dock.setTitleBarWidget(QtWidgets.QWidget(dock))
         self.settings.setValue(self.k_layout_locked, True)

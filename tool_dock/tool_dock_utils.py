@@ -42,6 +42,10 @@ class ToolDockSettings(QtCore.QSettings):
         if data_type == dict and not isinstance(settings_val, dict):
             settings_val = dict(settings_val)
 
+        # safety for int types
+        if data_type == int and not isinstance(settings_val, int):
+            settings_val = default if settings_val is None else int(settings_val)
+
         # safety convert bool to proper type
         if data_type == bool:
             settings_val = True if settings_val in ("true", "True", "1", 1, True) else False
