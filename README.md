@@ -22,6 +22,7 @@ Classes with a *get_tool_actions* function defined will be added as individual b
 
 *TOOL_DOCK_EXTRA_MODULES* defines extra modules to be imported on tool startup. Tools can be defined in these modules, which will then be available in the configurations.  
 
+You can also make a folder or module file that starts with *tool_dock_ext* anywhere in the sys.path and it will automatically be imported on startup. And any classes defined inside will be available. 
 
 # Install
 

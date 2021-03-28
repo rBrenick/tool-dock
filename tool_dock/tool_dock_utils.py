@@ -70,6 +70,7 @@ class LocalConstants(object):
 
     env_extra_modules = "TOOL_DOCK_EXTRA_MODULES"
     env_script_folders = "TOOL_DOCK_SCRIPT_FOLDERS"
+    extension_path_prefix = "tool_dock_ext"
 
     # settings keys
     user_script_paths = "user_script_paths"
@@ -439,13 +440,37 @@ def import_extra_modules(refresh=False):
                     sys.modules.pop(mod_key)
                     continue
 
+            if mod_key.startswith(lk.extension_path_prefix):
+                sys.modules.pop(mod_key)
+                continue
+
+    # search in sys.paths for tool_dock_ext modules and packages, then import them
+    for sys_path in sys.path:
+        if not os.path.isdir(sys_path):
+            continue
+
+        for sys_path_name in os.listdir(sys_path):
+
+            # only import modules with this specific name at the start
+            if not sys_path_name.startswith(lk.extension_path_prefix):
+                continue
+
+            module_name = os.path.splitext(sys_path_name)[0]
+            modules_to_import.append(module_name)
+
+    # remove potential duplicates
+    modules_to_import = list(set(modules_to_import))
+
     # import modules defined in environment variable
     for module_import_str in modules_to_import:
-        if module_import_str:  # if not an empty string
-            try:
-                importlib.import_module(module_import_str)
-            except Exception as e:
-                traceback.print_exc()
+        if not module_import_str:  # skip empty strings
+            continue
+
+        try:
+            importlib.import_module(module_import_str)
+            print("Imported tool_dock extension: {}".format(module_import_str))
+        except Exception as e:
+            traceback.print_exc()
 
 
 def get_func_arguments(func):
