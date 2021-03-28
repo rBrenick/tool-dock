@@ -89,12 +89,14 @@ class ToolDockWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
 
     def ui_build_tool_widgets(self):
         # remove any existing tooldock dock widgets
-        for dock_widget in self.tool_dock_widgets:  # type: QtWidgets.QDockWidget
+        for dock_widget in self.tool_dock_widgets + self.spacer_dock_widgets:  # type: QtWidgets.QDockWidget
             tool_cls = dock_widget.widget()  # type: tdu.ToolDockItemBase
-            tool_cls._remove_callbacks()
+            if isinstance(tool_cls, tdu.ToolDockItemBase):
+                tool_cls._remove_callbacks()
             dock_widget.close()
             dock_widget.deleteLater()
         self.tool_dock_widgets = []
+        self.spacer_dock_widgets = []
 
         # wait for deleteLater to finish
         ui_utils.process_q_events()
