@@ -13,6 +13,7 @@ class BaseToolDockInterface(object):
 
     def register_scene_change_callback(self, func):
         print("register_scene_change_callback is not implemented for this DCC")
+        return []  # return a list of callbacks that can be removed later
 
     def remove_callback(self, callback):
         print("register_scene_change_callback is not implemented for this DCC")

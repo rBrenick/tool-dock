@@ -17,6 +17,14 @@ ICON_FOLDER = os.path.join(os.path.dirname(os.path.dirname(__file__)), "icons")
 Q_APP = QtWidgets.QApplication.instance()  # type: QtWidgets.QApplication
 
 currently_using_maya = os.path.basename(sys.executable) == "maya.exe"
+currently_using_mobu = os.path.basename(sys.executable) == "motionbuilder.exe"
+
+if currently_using_maya:
+    dcc_name = "Maya"
+elif currently_using_mobu:
+    dcc_name = "MotionBuilder"
+else:
+    dcc_name = "Standalone"
 
 """
 QT UTILS BEGIN
@@ -35,7 +43,7 @@ def get_app_window():
         except ImportError as e:
             pass
 
-    else:
+    elif currently_using_mobu:
         # Motionbuilder
         from pyfbsdk import FBSystem
 
@@ -210,17 +218,14 @@ if currently_using_maya:
         return win.windowTitle()
 
 else:
-    # MotionBuilder
-    class DockableWidget(QtWidgets.QDockWidget):
+    # MotionBuilder (or Standalone)
+    class DockableWidget(QtWidgets.QMainWindow):
         docking_object_name = "DockableWidget"
 
         def __init__(self, parent=get_app_window()):
             delete_window(self)
             super(DockableWidget, self).__init__(parent=parent)
-            # self.setAttribute(QtCore.Qt.WA_DeleteOnClose, True)
             self.setObjectName(self.docking_object_name)  # this one is important
-            self.setWindowTitle('MotionBuilder Dockable Widget')
-            self.setFloating(True)
             self.window_index = 0
 
         def apply_ui_widget(self, widget):
@@ -231,8 +236,30 @@ else:
                                restore=False, restore_script="create_dockable_widget(restore=True)",
                                force_refresh=False, window_index=None
                                ):
-        widget_instance = widget_class()
-        widget_instance.show()
+
+        existing_app = QtWidgets.QApplication.instance()
+        if not existing_app:
+            app = QtWidgets.QApplication(sys.argv)
+            global Q_APP
+            Q_APP = app
+
+        widget_instance = widget_class()  # type: QtWidgets.QMainWindow
+
+        stylesheet_path = os.path.join(os.path.dirname(__file__), "stylesheets", "darkblue.stylesheet")
+        if os.path.exists(stylesheet_path):
+            with open(stylesheet_path, "r") as fh:
+                widget_instance.setStyleSheet(fh.read())
+
+        icon = create_qicon("tool_dock_icon")
+        if icon:
+            widget_instance.setWindowIcon(icon)
+
+        if existing_app:
+            widget_instance.show()
+        else:
+            widget_instance.show()
+            sys.exit(app.exec_())
+
         return widget_instance
 
 

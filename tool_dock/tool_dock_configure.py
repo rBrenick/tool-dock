@@ -1,6 +1,5 @@
 # Standard
 import os
-import sys
 
 # Tool
 from tool_dock import tool_dock_utils as tdu
@@ -38,10 +37,18 @@ class ToolDockConfigurationDialog(QtWidgets.QDialog):
         self.resize(QtCore.QSize(700, 400))
 
     def open_add_script_dialog(self):
-        win = AddScriptDialog(parent=self)
-        win.script_added.connect(self.rebuild_ui)
-        win.show()
-        return win
+
+        selected_files, _ = QtWidgets.QFileDialog.getOpenFileNames(self, "Select script files", filter="*.py")
+        if selected_files:
+            add_scripts_to_user_paths(selected_files)
+        self.rebuild_ui()
+
+        # At some future point I'll probably need this more complicated UI for this.
+
+        # win = AddScriptDialog(parent=self)
+        # win.script_added.connect(self.rebuild_ui)
+        # win.show()
+        # return win
 
     def rebuild_ui(self):
         self.tool_classes = {cls.TOOL_NAME: cls for cls in tdu.get_tool_classes()}
@@ -124,7 +131,7 @@ class ToolDockConfigurationUI(QtWidgets.QWidget):
         self.main_splitter.addWidget(self.script_preview_TE)
 
         # divide splitter in half
-        self.main_splitter.setSizes([sys.maxint, sys.maxint])
+        self.main_splitter.setSizes([1, 1])
 
         # Save button
         self.save_BTN = QtWidgets.QPushButton("Save")
@@ -133,6 +140,7 @@ class ToolDockConfigurationUI(QtWidgets.QWidget):
 
 ######################################################################################
 # Add User Script
+# THIS DIALOG IS CURRENTLY NOT USED. A FILE BROWSER WAS SUFFICIENT
 
 class AddScriptDialog(QtWidgets.QDialog):
     """
@@ -144,7 +152,7 @@ class AddScriptDialog(QtWidgets.QDialog):
         super(AddScriptDialog, self).__init__(parent=parent, *args, **kwargs)
         self.setWindowTitle("Add Script to Tool List")
 
-        self.settings = tdu.get_tool_dock_settings()
+        self.settings = tdu.lk.settings
 
         self.ui = AddScriptUI()
         self.setLayout(self.ui.main_layout)
@@ -155,32 +163,22 @@ class AddScriptDialog(QtWidgets.QDialog):
         self.resize(QtCore.QSize(500, 200))
 
     def save_script(self):
-
-        user_script_paths = self.settings.get_value(tdu.lk.user_script_paths, default=list())
-
         script_text = self.ui.script_TE.toPlainText()
         if len(script_text.splitlines()) == 1:
             script_path = script_text.replace("\\", "/")
-
             if not os.path.exists(script_path):
                 QtWidgets.QMessageBox.warning(self, "Path not found",
                                               "Path not found on disk:\n{}\n".format(script_path))
                 return
 
-            # add to settings
-            user_script_paths.append(script_path)
-
-            # generate class for current instance as well
-            tdu.lk.dynamic_class_from_script(script_path)
+            add_scripts_to_user_paths(script_path)
 
             # tell the configure dialog that something has been added
             self.script_added.emit(script_path)
+
         else:
             QtWidgets.QMessageBox.warning(self, "Only script paths supported",
                                           "Multi line input found. Currently only paths to script are supported")
-
-        user_script_paths = list(set(user_script_paths))
-        self.settings.setValue(tdu.lk.user_script_paths, user_script_paths)
 
 
 class AddScriptUI(QtWidgets.QWidget):
@@ -196,3 +194,19 @@ class AddScriptUI(QtWidgets.QWidget):
 
         self.save_BTN = QtWidgets.QPushButton("Add Script")
         self.main_layout.addWidget(self.save_BTN)
+
+
+def add_scripts_to_user_paths(script_paths):
+    if not isinstance(script_paths, list):
+        script_paths = [script_paths]
+
+    user_script_paths = tdu.lk.settings.get_value(tdu.lk.user_script_paths, default=list())
+    for script_path in script_paths:
+        # add to settings
+        user_script_paths.append(script_path)
+
+        # generate class for current instance as well
+        tdu.lk.dynamic_class_from_script(script_path)
+
+    user_script_paths = list(set(user_script_paths))
+    tdu.lk.settings.setValue(tdu.lk.user_script_paths, user_script_paths)

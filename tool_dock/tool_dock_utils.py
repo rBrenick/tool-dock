@@ -4,6 +4,7 @@ import inspect
 import os
 import runpy
 import sys
+import traceback
 from copy import copy
 from functools import partial
 
@@ -22,6 +23,42 @@ class RequiresValueType(object):
     pass
 
 
+class ToolDockSettings(QtCore.QSettings):
+    def __init__(self, *args, **kwargs):
+        super(ToolDockSettings, self).__init__(*args, **kwargs)
+
+    def get_value(self, key, default=None):
+        data_type = None
+        if default is not None:
+            data_type = type(default)
+
+        settings_val = self.value(key, defaultValue=default)
+
+        # safety for list types
+        if data_type == list and not isinstance(settings_val, list):
+            settings_val = [settings_val] if settings_val else list()
+
+        # safety for dict types
+        if data_type == dict and not isinstance(settings_val, dict):
+            settings_val = dict(settings_val)
+
+        # safety convert bool to proper type
+        if data_type == bool:
+            settings_val = True if settings_val in ("true", "True", "1", 1, True) else False
+
+        return settings_val
+
+    def set_user_color(self, tool_name, color):
+        user_colors = self.get_value(lk.user_colors, default=dict())
+        user_colors[tool_name] = color
+        self.setValue(lk.user_colors, user_colors)
+
+    def set_user_label(self, tool_name, label):
+        user_labels = self.get_value(lk.user_labels, default=dict())
+        user_labels[tool_name] = label
+        self.setValue(lk.user_labels, user_labels)
+
+
 class LocalConstants(object):
     # generate custom py scripts from folder
     dynamic_classes_generated = False
@@ -34,6 +71,9 @@ class LocalConstants(object):
     user_script_paths = "user_script_paths"
     user_colors = "user_colors"
     user_labels = "user_labels"
+    # only make one settings instance for use everywhere
+    settings = ToolDockSettings(QtCore.QSettings.IniFormat, QtCore.QSettings.UserScope,
+                                'tool_dock', '{dcc}_tool_dock'.format(dcc=ui_utils.dcc_name.lower()))
 
     # a base scripts folder can be defined via this environment variable
     # script files in this folder structure will be added as dynamic classes
@@ -69,10 +109,8 @@ class LocalConstants(object):
 
     def dynamic_classes_from_user_settings(self):
         """Generate classes for all user specified script paths"""
-        settings = get_tool_dock_settings()
-
         script_classes = []
-        for user_script_path in settings.get_value(ToolDockSettings.k_user_script_paths, default=list()):
+        for user_script_path in self.settings.get_value(lk.user_script_paths, default=list()):
             if not os.path.exists(user_script_path):
                 print("Script path does not exist: {}".format(user_script_path))
                 continue
@@ -121,7 +159,7 @@ class _InternalToolDockItemBase(QtWidgets.QWidget):
         if not self.TOOL_LABEL:
             self.TOOL_LABEL = self.TOOL_NAME
 
-        self.settings = get_tool_dock_settings()
+        self.settings = lk.settings
 
         self.main_layout = QtWidgets.QHBoxLayout()
         self.main_layout.setContentsMargins(0, 0, 0, 0)
@@ -210,11 +248,11 @@ class _InternalToolDockItemBase(QtWidgets.QWidget):
         if not run_arguments:
             return
 
-        for param_name, default_value in run_arguments.items():
-            if param_name == "self":  # ignore 'self' argument, should be safe-ish
-                run_arguments.pop(param_name)
-                continue
+        # ignore 'self' argument, should be safe-ish
+        if "self" in list(run_arguments.keys()):
+            run_arguments.pop("self")
 
+        for param_name, default_value in run_arguments.items():
             is_required = default_value == RequiresValueType
             if is_required:
                 run_arguments[param_name] = str()  # fill to make sure every argument has something
@@ -347,7 +385,7 @@ class _InternalToolDockItemBase(QtWidgets.QWidget):
         # show parameter grid if parameters are defined
         if self.param_grid.parameters:
             self.main_splitter.handle(1).setEnabled(True)
-            self.main_splitter.setSizes([sys.maxint, sys.maxint])
+            self.main_splitter.setSizes([1, 1])
         else:
             self.main_splitter.setHandleWidth(0)
 
@@ -382,48 +420,6 @@ class ToolDockItemBase(_InternalToolDockItemBase):
     pass
 
 
-class ToolDockSettings(QtCore.QSettings):
-    k_user_script_paths = "user_script_paths"
-
-    def __init__(self, *args, **kwargs):
-        super(ToolDockSettings, self).__init__(*args, **kwargs)
-
-    def get_value(self, key, default=None):
-        data_type = None
-        if default is not None:
-            data_type = type(default)
-
-        settings_val = self.value(key, defaultValue=default)
-
-        # safety for list types
-        if data_type == list and not isinstance(settings_val, list):
-            settings_val = [settings_val] if settings_val else list()
-
-        # safety for dict types
-        if data_type == dict and not isinstance(settings_val, dict):
-            settings_val = dict(settings_val)
-
-        # safety convert bool to proper type
-        if data_type == bool:
-            settings_val = True if settings_val in ("true", "True", "1", 1, True) else False
-
-        return settings_val
-
-    def set_user_color(self, tool_name, color):
-        user_colors = self.get_value(lk.user_colors, default=dict())
-        user_colors[tool_name] = color
-        self.setValue(lk.user_colors, user_colors)
-
-    def set_user_label(self, tool_name, label):
-        user_labels = self.get_value(lk.user_labels, default=dict())
-        user_labels[tool_name] = label
-        self.setValue(lk.user_labels, user_labels)
-
-
-def get_tool_dock_settings():
-    return ToolDockSettings(QtCore.QSettings.IniFormat, QtCore.QSettings.UserScope, 'tool_dock')
-
-
 def import_extra_modules(refresh=False):
     modules_to_import = os.environ.get(lk.env_extra_modules, "").split(";")
 
@@ -442,7 +438,10 @@ def import_extra_modules(refresh=False):
     # import modules defined in environment variable
     for module_import_str in modules_to_import:
         if module_import_str:  # if not an empty string
-            importlib.import_module(module_import_str)
+            try:
+                importlib.import_module(module_import_str)
+            except Exception as e:
+                traceback.print_exc()
 
 
 def get_func_arguments(func):

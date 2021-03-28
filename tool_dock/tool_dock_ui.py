@@ -37,7 +37,7 @@ class ToolDockWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
 
         self.dock_widgets = []
         self.title_bar_widgets = {}
-        self.settings = tdu.get_tool_dock_settings()  # type: tdu.ToolDockSettings
+        self.settings = tdu.lk.settings  # type: tdu.ToolDockSettings
 
         # add a static widget to dock other widgets around
         self.central_widget = QtWidgets.QWidget()
