@@ -10,7 +10,7 @@ from tool_dock import tool_dock_configure as tdc
 from tool_dock import tool_dock_utils as tdu
 # UI
 from tool_dock.ui import ui_utils
-from tool_dock.ui.ui_utils import QtCore, QtWidgets
+from tool_dock.ui.ui_utils import QtCore, QtWidgets, QtGui
 
 try:
     # subclasses defined in here will be read on window initialization
@@ -91,6 +91,7 @@ class ToolDockWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
         # Extra actions
         self.tool_bar.addAction(QtWidgets.QAction("Set Name", self, triggered=self.ui_set_window_title))
         self.tool_bar.addAction(QtWidgets.QAction("Add Spacer", self, triggered=self.ui_add_spacer))
+        self.tool_bar.addAction(QtWidgets.QAction("Set Text Padding", self, triggered=self.set_button_padding))
 
         # setting strings
         self.active_tooldock = "tooldock_{}".format(self.window_index)
@@ -107,6 +108,12 @@ class ToolDockWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
         self.ui_load_settings_timer = QtCore.QTimer()
         self.ui_load_settings_timer.setSingleShot(True)
         self.ui_load_settings_timer.timeout.connect(self.ui_load_settings)
+
+        # set button text padding from settings
+        # (important that this happens before ui_build_tool_widgets)
+        button_padding = self.settings.get_value(tdu.lk.button_text_padding_multiplier,
+                                                 default=ui_utils.ContentResizeButton.TEXT_PADDING_MULTIPLIER)
+        ui_utils.ContentResizeButton.TEXT_PADDING_MULTIPLIER = button_padding
 
         # build dock widgets for all configured tools
         self.ui_build_tool_widgets()
@@ -278,6 +285,17 @@ class ToolDockWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
         dock_widget.close()
         dock_widget.deleteLater()
         self.spacer_dock_widgets.remove(dock_widget)
+
+    def set_button_padding(self):
+        win = tdc.ButtonPaddingConfigureDialog(self)
+        win.slider_widget.value_set.connect(self.ui_refresh_buttons)
+        win.show()
+
+    def ui_refresh_buttons(self):
+        for dock in self.tool_dock_widgets:
+            dock_tool_widget = dock.widget()  # type: tdu.ToolDockItemBase
+            main_widget = dock_tool_widget.main_ui_widget
+            main_widget.resizeEvent(QtGui.QResizeEvent(main_widget.size(), QtCore.QSize()))
 
     def ui_lock_layout(self):
         for dock in self.tool_dock_widgets + self.spacer_dock_widgets:  # type:QtWidgets.QDockWidget

@@ -4,7 +4,7 @@ import os
 # Tool
 from tool_dock import tool_dock_utils as tdu
 # UI
-from tool_dock.ui import ui_utils
+from tool_dock.ui import ui_utils, parameter_widgets
 from tool_dock.ui.ui_utils import QtCore, QtWidgets, QtGui
 
 
@@ -229,3 +229,31 @@ def add_scripts_to_user_paths(script_paths):
 
     user_script_paths = list(set(user_script_paths))
     tdu.lk.settings.setValue(tdu.lk.user_script_paths, user_script_paths)
+
+
+#######################################################################################################
+
+class ButtonPaddingConfigureDialog(QtWidgets.QDialog):
+    """
+    Add extra user defined scripts to list of tools
+    """
+
+    def __init__(self, parent=ui_utils.get_app_window(), *args, **kwargs):
+        super(ButtonPaddingConfigureDialog, self).__init__(parent=parent, *args, **kwargs)
+        self.setWindowTitle("Set text padding multiplier")
+
+        self.settings = tdu.lk.settings
+
+        self.slider_widget = parameter_widgets.FloatDisplay(min=0, max=1,
+                                                            default=ui_utils.ContentResizeButton.TEXT_PADDING_MULTIPLIER)
+        self.slider_widget.value_set.connect(self.set_padding_mult)
+
+        main_layout = QtWidgets.QVBoxLayout()
+        main_layout.addWidget(self.slider_widget)
+
+        self.setLayout(main_layout)
+        self.resize(QtCore.QSize(600, 100))
+
+    def set_padding_mult(self, val):
+        ui_utils.ContentResizeButton.TEXT_PADDING_MULTIPLIER = val
+        self.settings.setValue(tdu.lk.button_text_padding_multiplier, val)

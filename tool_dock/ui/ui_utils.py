@@ -366,6 +366,8 @@ def open_color_picker(current_color=None, color_signal=None):
 
 
 class ContentResizeButton(QtWidgets.QPushButton):
+    TEXT_PADDING_MULTIPLIER = 0.9
+
     def resizeEvent(self, event):
         self.update_icon_size()
         self.update_button_text_size()
@@ -389,7 +391,7 @@ class ContentResizeButton(QtWidgets.QPushButton):
         w_factor = float(size.width()) / max((self.fontMetrics().width(self.text()) + icon_width), 0.0001)
 
         # the smaller value determines max text size
-        factor = min(h_factor, w_factor) * 0.9
+        factor = min(h_factor, w_factor) * self.TEXT_PADDING_MULTIPLIER
 
         # clamp output to a min size
         final_point_size = max(font.pointSizeF() * factor, 8.0)

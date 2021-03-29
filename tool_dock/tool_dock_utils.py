@@ -81,6 +81,7 @@ class LocalConstants(object):
     user_colors = "user_colors"
     user_labels = "user_labels"
     last_viewed_tools = "last_viewed_tools"  # list of tools seen in tool
+    button_text_padding_multiplier = "button_text_padding_multiplier"
 
     # only make one settings instance for use everywhere
     settings = ToolDockSettings(QtCore.QSettings.IniFormat, QtCore.QSettings.UserScope,
