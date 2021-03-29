@@ -141,6 +141,7 @@ class LocalConstants(object):
         if script_name in self.dynamic_classes.keys():
             return
 
+        script_path = script_path.replace("\\", "/")  # backslash safety
         script_cls = make_class_from_script(script_path, tool_name=script_name)
 
         self.dynamic_classes[script_name] = script_cls

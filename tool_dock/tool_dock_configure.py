@@ -115,7 +115,6 @@ class ToolDockConfigurationDialog(QtWidgets.QDialog):
         super(ToolDockConfigurationDialog, self).closeEvent(e)
 
 
-
 class ToolDockConfigurationUI(QtWidgets.QWidget):
     """
     Define which actions should be visible in the ToolDock
