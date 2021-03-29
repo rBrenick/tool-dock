@@ -53,11 +53,31 @@ class ToolDockWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
         self.setTabPosition(QtCore.Qt.BottomDockWidgetArea, QtWidgets.QTabWidget.TabPosition.North)
 
         # create docks for each subclassed tool widget
-        menu_bar = self.menuBar()  # type: QtWidgets.QMenuBar
-        menu_bar.addAction("Configure", self.configure_tooldock)
-        layout_menu = menu_bar.addMenu("Layout")  # type: QtWidgets.QMenu
-        layout_menu.addAction("Set Window Name", self.ui_set_window_title)
-        layout_menu.addAction("Add Spacer", self.ui_add_spacer)
+        self.tool_bar = QtWidgets.QToolBar("Tool Dock Menu")
+        self.setToolButtonStyle(QtCore.Qt.ToolButtonTextBesideIcon)
+        self.addToolBar(QtCore.Qt.TopToolBarArea, self.tool_bar)
+
+        # configure tools action
+        configure_action = QtWidgets.QAction(ui_utils.create_qicon("configure"), "Configure", self)
+        configure_action.triggered.connect(self.configure_tooldock)
+        self.tool_bar.addAction(configure_action)
+
+        # make id for new_tool_check
+        config_widget = self.tool_bar.widgetForAction(configure_action)
+        config_widget.setObjectName("configure")
+
+        # Layout button
+        layout_tool_button = QtWidgets.QToolButton(self)
+        layout_tool_button.setText("Layout")
+        layout_tool_button.setIcon(ui_utils.create_qicon("layout"))
+        layout_tool_button.setToolButtonStyle(QtCore.Qt.ToolButtonTextBesideIcon)
+
+        # add layout menu
+        layout_tool_button.setStyleSheet("QToolButton::menu-indicator{width:0px;}")
+        layout_tool_button.setPopupMode(QtWidgets.QToolButton.InstantPopup)
+        layout_menu = QtWidgets.QMenu(layout_tool_button)
+        layout_tool_button.setMenu(layout_menu)
+
         layout_menu.addAction("Lock Layout", self.ui_lock_layout)
         layout_menu.addAction("Unlock Layout", self.ui_unlock_layout)
         layout_menu.addSeparator()
@@ -66,6 +86,11 @@ class ToolDockWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
         layout_menu.addSeparator()
         layout_menu.addAction("Save Layout File", self.save_settings_to_file)
         layout_menu.addAction("Load Layout File", self.load_settings_from_file)
+        self.tool_bar.addWidget(layout_tool_button)
+
+        # Extra actions
+        self.tool_bar.addAction(QtWidgets.QAction("Set Name", self, triggered=self.ui_set_window_title))
+        self.tool_bar.addAction(QtWidgets.QAction("Add Spacer", self, triggered=self.ui_add_spacer))
 
         # setting strings
         self.active_tooldock = "tooldock_{}".format(self.window_index)
@@ -86,6 +111,9 @@ class ToolDockWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
         # build dock widgets for all configured tools
         self.ui_build_tool_widgets()
         self.ui_load_settings_timer.start(0)
+
+        # after initialization, update UI if new tools are available
+        self.ui_update_new_tools_display()
 
     def ui_build_tool_widgets(self):
         # remove any existing tooldock dock widgets
@@ -201,6 +229,13 @@ class ToolDockWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
         active_tools = self.settings.value(self.k_active_tools, defaultValue=list())
         win = tdc.ToolDockConfigurationDialog(self, active_tools=active_tools)
         win.config_saved.connect(self.save_user_tooldock)
+
+        # save the tools list so we can check if new tools have been added in the future
+        self.settings.set_tools_as_viewed()
+
+        # update ui display
+        self.ui_update_new_tools_display()
+
         return win.show()
 
     def save_user_tooldock(self, tool_names):
@@ -259,6 +294,12 @@ class ToolDockWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
         self.title_bar_widgets.clear()
         self.settings.setValue(self.k_layout_locked, False)
 
+    def ui_update_new_tools_display(self):
+        if self.are_new_tools_available():
+            self.tool_bar.setStyleSheet("QToolButton#configure{background-color: rgb(40, 120, 40)}")
+        else:
+            self.tool_bar.setStyleSheet("")
+
     def save_settings_to_file(self):
         self.ui_save_settings()
         new_path = tdu.save_tooldock_settings(self.settings, current_tooldock=self.active_tooldock)
@@ -278,6 +319,18 @@ class ToolDockWindow(ui_utils.DockableWidget, QtWidgets.QMainWindow):
             # self.resize(self.size())
             # self.updateGeometry()
             # self.load_ui_settings()
+
+    def are_new_tools_available(self):
+        last_viewed_tools = self.settings.get_value(tdu.lk.last_viewed_tools, default=list())
+
+        # tools have never been shown, so all tools are new
+        if len(last_viewed_tools) == 0:
+            return False
+
+        for tool_cls in tdu.get_tool_classes():  # type: tdu.ToolDockItemBase
+            if tool_cls.TOOL_NAME not in last_viewed_tools:
+                return True  # new tool found, exit early
+        return False
 
     # TODO: this event doesn't seem to trigger when using MayaQWidgetDockableMixin
     def closeEvent(self, event):

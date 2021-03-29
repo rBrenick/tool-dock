@@ -62,6 +62,10 @@ class ToolDockSettings(QtCore.QSettings):
         user_labels[tool_name] = label
         self.setValue(lk.user_labels, user_labels)
 
+    def set_tools_as_viewed(self):
+        available_tools = [cls.TOOL_NAME for cls in get_tool_classes()]
+        self.setValue(lk.last_viewed_tools, available_tools)
+
 
 class LocalConstants(object):
     # generate custom py scripts from folder
@@ -76,6 +80,8 @@ class LocalConstants(object):
     user_script_paths = "user_script_paths"
     user_colors = "user_colors"
     user_labels = "user_labels"
+    last_viewed_tools = "last_viewed_tools"  # list of tools seen in tool
+
     # only make one settings instance for use everywhere
     settings = ToolDockSettings(QtCore.QSettings.IniFormat, QtCore.QSettings.UserScope,
                                 'tool_dock', '{dcc}_tool_dock'.format(dcc=ui_utils.dcc_name.lower()))

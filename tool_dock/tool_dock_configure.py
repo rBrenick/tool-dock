@@ -17,9 +17,13 @@ class ToolDockConfigurationDialog(QtWidgets.QDialog):
     def __init__(self, parent=ui_utils.get_app_window(), active_tools=None, *args, **kwargs):
         super(ToolDockConfigurationDialog, self).__init__(parent=parent, *args, **kwargs)
         self.setWindowTitle("ToolDock Configuration")
+        self.setWindowIcon(ui_utils.create_qicon("configure"))
+
+        self.settings = tdu.lk.settings
 
         self.active_tools = active_tools
         self.tool_classes = {}
+        self.seen_tools = self.settings.get_value(tdu.lk.last_viewed_tools, default=list())
 
         self.ui = ToolDockConfigurationUI()
         self.setLayout(self.ui.main_layout)
@@ -62,7 +66,7 @@ class ToolDockConfigurationDialog(QtWidgets.QDialog):
         # last selected script will be previewed
         item = selected_items[-1]
 
-        tool_cls = self.tool_classes.get(item.text())  # type: tdu.ToolDockItemBase
+        tool_cls = self.tool_classes.get(item.data(QtCore.Qt.UserRole))  # type: tdu.ToolDockItemBase
 
         script_preview_text = tdu.get_preview_from_tool(tool_cls)
 
@@ -74,10 +78,21 @@ class ToolDockConfigurationDialog(QtWidgets.QDialog):
 
         sorted_tool_names = sorted(self.tool_classes.keys())
 
+        new_tool_color = QtGui.QColor()
+        new_tool_color.setRgb(40, 120, 60)
+
         for tool_name in sorted_tool_names:
             tool_cls = self.tool_classes.get(tool_name)  # type: tdu.ToolDockItemBase
             lwi = QtWidgets.QListWidgetItem(self.ui.tools_LW)
-            lwi.setText(tool_name)
+            lwi.setData(QtCore.Qt.UserRole, tool_name)  # store proper tool name
+            display_tool_name = tool_name
+
+            # special display for new tools
+            if len(self.seen_tools) > 0 and tool_name not in self.seen_tools:
+                lwi.setBackgroundColor(new_tool_color)
+                display_tool_name = "{} - NEW".format(tool_name)
+
+            lwi.setText(display_tool_name)
             lwi.setToolTip(tdu.get_tool_tip_from_tool(tool_cls))
             lwi.setFlags(lwi.flags() | QtCore.Qt.ItemIsUserCheckable)
             lwi.setCheckState(QtCore.Qt.Unchecked)
@@ -92,8 +107,13 @@ class ToolDockConfigurationDialog(QtWidgets.QDialog):
         checked_tool_names = []
         for tool_lwi in ui_utils.get_list_widget_items(self.ui.tools_LW):  # type:QtWidgets.QListWidgetItem
             if tool_lwi.checkState() == QtCore.Qt.Checked:
-                checked_tool_names.append(tool_lwi.text())
+                checked_tool_names.append(tool_lwi.data(QtCore.Qt.UserRole))
         return checked_tool_names
+
+    def closeEvent(self, e):
+        self.settings.set_tools_as_viewed()
+        super(ToolDockConfigurationDialog, self).closeEvent(e)
+
 
 
 class ToolDockConfigurationUI(QtWidgets.QWidget):

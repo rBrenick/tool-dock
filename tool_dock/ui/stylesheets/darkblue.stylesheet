@@ -152,10 +152,6 @@ QComboBox::drop-down
      border-bottom-right-radius: 3px;
  }
 
-QComboBox::down-arrow
-{
-     image: url(:/down_arrow.png);
-}
 
 QGroupBox:focus
 {
@@ -330,7 +326,6 @@ QMainWindow::separator:hover
 QToolBar::handle
 {
      spacing: 3px; /* spacing between items in the tool bar */
-     background: url(:/images/handle.png);
 }
 
 QMenu::separator
