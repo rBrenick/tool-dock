@@ -13,6 +13,10 @@ class ParameterGrid(QtWidgets.QTreeView):
         self.setModel(self._model)
         self.setUniformRowHeights(True)
 
+        # section resize
+        self._header_resize_active = False
+        self.setMouseTracking(True)
+
         self.parameters = []
 
         # display options
@@ -104,6 +108,35 @@ class ParameterGrid(QtWidgets.QTreeView):
         header_sizes = ui_info.get("header_sizes")
         for col in range(self._model.columnCount()):
             self.header().resizeSection(col, header_sizes[col])
+
+    def is_within_header_resize_area(self, event):
+        header_section_0_x = self.header().sectionSize(0)
+        margin_size = 4  # amount pixels left and right of section splitter where it can be resized from
+        range_margin = range(header_section_0_x - margin_size, header_section_0_x + margin_size)
+        return event.x() in range_margin
+
+    #################################################################
+    # Event overrides (to allow section resize without header)
+
+    def mousePressEvent(self, event):
+        if self.is_within_header_resize_area(event):
+            self._header_resize_active = True
+
+    def mouseMoveEvent(self, event):
+        if self.is_within_header_resize_area(event):
+            self.setCursor(QtCore.Qt.SplitHCursor)
+        else:
+            if not self._header_resize_active:
+                self.setCursor(QtCore.Qt.ArrowCursor)
+
+        if not self._header_resize_active:
+            return
+
+        if event.buttons() == QtCore.Qt.LeftButton:
+            self.header().resizeSection(0, event.x())
+
+    def mouseReleaseEvent(self, event):
+        self._header_resize_active = False
 
 
 class BaseParam(object):

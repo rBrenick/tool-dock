@@ -219,6 +219,8 @@ class _InternalToolDockItemBase(QtWidgets.QWidget):
         # parameter grid
         self.param_grid = parameter_grid.ParameterGrid()
         self.param_grid.setSizePolicy(QtWidgets.QSizePolicy.Ignored, QtWidgets.QSizePolicy.Ignored)
+        self.param_grid.setHeaderHidden(True)
+        self.param_grid.setEditTriggers(self.param_grid.NoEditTriggers)
         self.main_splitter.addWidget(self.param_grid)
 
         # build run buttons and add to splitter
